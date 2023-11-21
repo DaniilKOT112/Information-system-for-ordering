@@ -40,7 +40,35 @@ CREATE TABLE IF NOT EXISTS public.categories_parent_category
         ON UPDATE CASCADE
         ON DELETE CASCADE
 );
-    
+ 
+CREATE TABLE IF NOT EXISTS public.product
+(
+    id_product integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    name text COLLATE pg_catalog."default" NOT NULL,
+    id_image integer NOT NULL,
+    id_category integer NOT NULL,
+    description text COLLATE pg_catalog."default" NOT NULL,
+    amount bigint NOT NULL DEFAULT nextval('product_amount_seq'::regclass),
+    price integer NOT NULL,
+    CONSTRAINT product_pkey PRIMARY KEY (id_product),
+    CONSTRAINT categories_parent_categories FOREIGN KEY (id_category)
+        REFERENCES public.categories_parent_category (id_categories_parent_category) MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID,
+    CONSTRAINT image FOREIGN KEY (id_image)
+        REFERENCES public.image (id_image) MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID
+);
+
+CREATE TABLE IF NOT EXISTS public.image
+(
+    id_image integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    url bytea,
+    CONSTRAINT image_pkey PRIMARY KEY (id_image)
+);
     """
 
 connection = psycopg2.connect(**db)
