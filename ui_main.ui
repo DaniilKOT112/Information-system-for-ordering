@@ -500,7 +500,7 @@ font: bold;</string>
             <item>
              <widget class="QStackedWidget" name="Widget_pages">
               <property name="currentIndex">
-               <number>6</number>
+               <number>4</number>
               </property>
               <widget class="QWidget" name="pageCatalog">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -1432,6 +1432,9 @@ font: bold;</string>
                        </item>
                        <item>
                         <widget class="QComboBox" name="comboBoxCategoriesProduct">
+                         <property name="focusPolicy">
+                          <enum>Qt::ClickFocus</enum>
+                         </property>
                          <property name="styleSheet">
                           <string notr="true"/>
                          </property>
@@ -1942,6 +1945,10 @@ font: bold;</string>
                      </item>
                      <item row="3" column="0">
                       <widget class="QTableView" name="tableAddCategories">
+                       <property name="styleSheet">
+                        <string notr="true">font: 75 10pt &quot;Montserrat&quot;;
+font: bold;</string>
+                       </property>
                        <property name="selectionMode">
                         <enum>QAbstractItemView::ExtendedSelection</enum>
                        </property>
