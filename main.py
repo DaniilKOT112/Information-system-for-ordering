@@ -4,12 +4,15 @@ from functools import partial
 from PyQt5.QtCore import QPropertyAnimation, QSize, QRegExp
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QRegExpValidator
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QPushButton, QHeaderView
+
 from database import connection
 from ui_main import Ui_MainWindow
 from qt_material import apply_stylesheet
 
 directory = os.path.abspath(os.curdir)
-russian_validator = QRegExpValidator(QRegExp("[А-Яа-яЁё ]+"))
+russian_validator = QRegExpValidator(QRegExp('[А-Яа-яЁё ]+'))
+real = QRegExpValidator(QRegExp('^[0-9]+(\.[0-9]{1,2})?$'))
+integer = QRegExpValidator(QRegExp('^[0-9]+$'))
 
 
 # dictionary = {1: 'Сухой корм вкус курицы',
@@ -90,21 +93,97 @@ class MainWindow(QMainWindow):
             partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCategories))
         self.ui.addCategories.clicked.connect(self.insert_data_categories)
         self.ui.applyEditCategories.clicked.connect(self.update_categories)
+        self.ui.addProduct.clicked.connect(self.insert_data_product)
         self.ui.cancelEditCategories.clicked.connect(
             partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCategories))
+        self.ui.cancelProduct.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCatalog))
 
         # data_list = [f'{key}: {value}' for key, value in dictionary.items()]
         # self.model_table_catalog_product = QStandardItemModel(data_list)
         # self.ui.tableCatalogProduct.setModel(self.model_table_catalog_product)
 
+        self.ui.comboBoxCategoriesProduct.currentIndexChanged.connect(self.get_data_categories_parent_category)
         self.model_table_categories = QStandardItemModel()
         self.ui.tableAddCategories.setModel(self.model_table_categories)
         self.get_data_categories()
+        self.get_data_categories_parent_category()
 
         self.ui.lineEditNameCategory.setValidator(russian_validator)
         self.ui.lineEditParentCategory.setValidator(russian_validator)
         self.ui.lineEditParentCategory_2.setValidator(russian_validator)
         self.ui.lineEditNameCategory_2.setValidator(russian_validator)
+        self.ui.lineEditNameProduct.setValidator(russian_validator)
+
+        self.ui.lineEditAmountProduct.setValidator(integer)
+        self.ui.lineEditPriceProduct.setValidator(real)
+
+    def get_data_categories_parent_category(self):
+        try:
+            self.ui.comboBoxCategoriesProduct.currentIndexChanged.disconnect(self.get_data_categories_parent_category)
+            with connection.cursor() as cursor:
+                cursor.execute('''
+                    SELECT C.name_categories, PC.name
+                    FROM categories_parent_category CPC
+                    JOIN categories C ON CPC.id_categories = C.id_categories
+                    JOIN parent_category PC ON CPC.id_parent_categories = PC.id_parent_category
+                    ORDER BY C.name_categories;
+                ''')
+                categories = cursor.fetchall()
+
+                self.ui.comboBoxCategoriesProduct.addItems(
+                    [f'{category[0]} - {category[1]}' for category in categories])
+        except Exception as e:
+            print(f'Ошибка: {e}')
+
+    def insert_data_product(self):
+        try:
+            with connection.cursor() as cursor:
+                name_product = self.ui.lineEditNameProduct.text()
+                image_product_text = self.ui.textEditImageProduct.toPlainText()
+                combo_box_product = self.ui.comboBoxCategoriesProduct.currentText()
+                description_product = self.ui.textEditDescriptionProduct.toPlainText()
+                amount_product = int(self.ui.lineEditAmountProduct.text())
+                price_product = int(self.ui.lineEditPriceProduct.text())
+
+                if name_product == '' or image_product_text == '' or combo_box_product == '' or description_product == '' \
+                        or amount_product == '' or price_product == '':
+                    show_error_message('Вы не ввели значения!')
+                    return
+
+                category_name, parent_category_name = combo_box_product.split(' - ')
+
+                cursor.execute('''
+                    SELECT CPC.id_categories_parent_category
+                    FROM categories_parent_category CPC
+                    JOIN categories C ON CPC.id_categories = C.id_categories
+                    JOIN parent_category PC ON CPC.id_parent_categories = PC.id_parent_category
+                    WHERE C.name_categories = %s AND PC.name = %s;
+                ''', (category_name, parent_category_name))
+
+                id_categories_parent_category = cursor.fetchone()
+
+                cursor.execute('INSERT INTO image (url) VALUES (%s) RETURNING id_image;', (image_product_text,))
+                id_image = cursor.fetchone()
+
+                cursor.execute(
+                    'INSERT INTO product (name, id_image, id_category, description, amount, price) '
+                    'VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_product;',
+                    (name_product, id_image, id_categories_parent_category, description_product, amount_product,
+                     price_product)
+                )
+            connection.commit()
+        except Exception as e:
+            print(f'Ошибка: {e}')
+            show_error_message('Ошибка при добавлении товара!')
+
+        finally:
+            self.ui.lineEditNameProduct.clear()
+            self.ui.textEditImageProduct.clear()
+            self.ui.comboBoxCategoriesProduct.setCurrentIndex(0)
+            self.ui.textEditDescriptionProduct.clear()
+            self.ui.lineEditAmountProduct.clear()
+            self.ui.lineEditPriceProduct.clear()
+            self.ui.Widget_pages.setCurrentWidget(self.ui.pageCatalog)
 
     def insert_data_categories(self):
         try:

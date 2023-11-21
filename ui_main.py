@@ -540,6 +540,7 @@ class Ui_MainWindow(object):
         self.label_7.setObjectName("label_7")
         self.verticalLayout_2.addWidget(self.label_7)
         self.comboBoxCategoriesProduct = QtWidgets.QComboBox(self.frame_6)
+        self.comboBoxCategoriesProduct.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.comboBoxCategoriesProduct.setStyleSheet("")
         self.comboBoxCategoriesProduct.setObjectName("comboBoxCategoriesProduct")
         self.verticalLayout_2.addWidget(self.comboBoxCategoriesProduct)
@@ -721,6 +722,8 @@ class Ui_MainWindow(object):
         self.horizontalLayout_7.addWidget(self.addCategoriesList, 0, QtCore.Qt.AlignRight)
         self.gridLayout_3.addLayout(self.horizontalLayout_7, 2, 0, 1, 1)
         self.tableAddCategories = QtWidgets.QTableView(self.frame_4)
+        self.tableAddCategories.setStyleSheet("font: 75 10pt \"Montserrat\";\n"
+"font: bold;")
         self.tableAddCategories.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.tableAddCategories.setObjectName("tableAddCategories")
         self.tableAddCategories.horizontalHeader().setStretchLastSection(False)
@@ -966,7 +969,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
-        self.Widget_pages.setCurrentIndex(9)
+        self.Widget_pages.setCurrentIndex(4)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
