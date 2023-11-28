@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS public.product
     id_category integer NOT NULL,
     description text COLLATE pg_catalog."default" NOT NULL,
     amount bigint NOT NULL DEFAULT nextval('product_amount_seq'::regclass),
-    price integer NOT NULL,
+    price money NOT NULL,
     CONSTRAINT product_pkey PRIMARY KEY (id_product),
     CONSTRAINT categories_parent_categories FOREIGN KEY (id_category)
         REFERENCES public.categories_parent_category (id_categories_parent_category) MATCH SIMPLE
@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS public.product
         ON DELETE CASCADE
         NOT VALID
 );
+
 
 CREATE TABLE IF NOT EXISTS public.image
 (
