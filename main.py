@@ -1,9 +1,10 @@
 import os
 import sys
 from functools import partial
-from PyQt5.QtCore import QPropertyAnimation, QSize, QRegExp
+
+from PyQt5.QtCore import QPropertyAnimation, QSize, QRegExp, Qt, QUrl
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QRegExpValidator
-from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QPushButton, QHeaderView
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QPushButton, QHeaderView, QFileDialog, QLabel
 
 from database import connection
 from ui_main import Ui_MainWindow
@@ -13,18 +14,6 @@ directory = os.path.abspath(os.curdir)
 russian_validator = QRegExpValidator(QRegExp('[А-Яа-яЁё ]+'))
 real = QRegExpValidator(QRegExp('^[0-9]+(\.[0-9]{1,2})?$'))
 integer = QRegExpValidator(QRegExp('^[0-9]+$'))
-
-
-# dictionary = {1: 'Сухой корм вкус курицы',
-#               2: 'Сухой корм вкус индейки',
-#               3: 'Жидкий корм вкус рыбы',
-#               4: 'Жидкий корм вкус томата',
-#               5: 'Игрушка с ароматизатором курицы',
-#               6: 'Игрушка с ароматизатором мяты',
-#               7: 'Игрушка в виде серой мыши',
-#               8: 'Игрушка в виде воробья',
-#               9: 'Крупный древесный наполнитель',
-#               10: 'Мелкий древесный наполнитель'}
 
 
 def show_error_message(message):
@@ -74,6 +63,7 @@ class MainWindow(QMainWindow):
         self.horizontal_header = None
         self.header = None
         self.animation = None
+        self.image_file = None
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -83,43 +73,97 @@ class MainWindow(QMainWindow):
         self.ui.frameLeftMenu.leaveEvent = self.leave_event_handler
 
         self.ui.catalog.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCatalog))
-        self.ui.products.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageAddProduct))
+        self.ui.products.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageProduct))
         self.ui.orders.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageOrderList))
         self.ui.reports.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageReports))
         self.ui.categories.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCategories))
+        self.ui.addProductList.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageAddProduct))
+        self.ui.cancelProduct.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageProduct))
         self.ui.addCategoriesList.clicked.connect(
             partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageAddCategories))
         self.ui.cancelCategories.clicked.connect(
             partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCategories))
-        self.ui.addCategories.clicked.connect(self.insert_data_categories)
-        self.ui.applyEditCategories.clicked.connect(self.update_categories)
-        self.ui.addProduct.clicked.connect(self.insert_data_product)
         self.ui.cancelEditCategories.clicked.connect(
             partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCategories))
-        self.ui.cancelProduct.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCatalog))
 
-        # data_list = [f'{key}: {value}' for key, value in dictionary.items()]
-        # self.model_table_catalog_product = QStandardItemModel(data_list)
-        # self.ui.tableCatalogProduct.setModel(self.model_table_catalog_product)
+        self.ui.search.clicked.connect(self.search_product)
+        self.ui.filters.clicked.connect(self.apply_function)
+        self.filter_enabled = False
 
-        self.ui.comboBoxCategoriesProduct.currentIndexChanged.connect(self.get_data_categories_parent_category)
+        self.ui.addCategories.clicked.connect(self.insert_data_categories)
+        self.ui.addProduct.clicked.connect(self.insert_data_product)
+        self.ui.applyEditCategories.clicked.connect(self.update_categories)
+        self.ui.comboBoxCategoriesProduct.currentIndexChanged.connect(self.get_categories_parent_category)
+
+        self.ui.textEditImageProduct.mousePressEvent = self.open_image_dialog
+
         self.model_table_categories = QStandardItemModel()
         self.ui.tableAddCategories.setModel(self.model_table_categories)
+        self.model_table_product = QStandardItemModel()
+        self.ui.tableProductOrder.setModel(self.model_table_product)
+
+        self.get_categories_parent_category()
+        self.filter_product()
+        self.get_categories()
+        self.get_data_product()
         self.get_data_categories()
-        self.get_data_categories_parent_category()
+        self.ui.comboBox_categories.setEnabled(False)
 
         self.ui.lineEditNameCategory.setValidator(russian_validator)
         self.ui.lineEditParentCategory.setValidator(russian_validator)
         self.ui.lineEditParentCategory_2.setValidator(russian_validator)
         self.ui.lineEditNameCategory_2.setValidator(russian_validator)
         self.ui.lineEditNameProduct.setValidator(russian_validator)
+        self.ui.lineEditSearch.setValidator(russian_validator)
 
         self.ui.lineEditAmountProduct.setValidator(integer)
         self.ui.lineEditPriceProduct.setValidator(real)
 
-    def get_data_categories_parent_category(self):
+    def open_image_dialog(self, event):
+        if event.button() == Qt.LeftButton:
+            image_file, _ = QFileDialog.getOpenFileName(self, 'Select Image', '',
+                                                        'Image Files (*.png *.jpg *.bmp *.gif *.jpeg)')
+            if image_file:
+                url = QUrl.fromLocalFile(image_file)
+                image_html = f'<img src="{url.toString()}" width="370">'
+                self.ui.textEditImageProduct.clear()
+                self.ui.textEditImageProduct.append(image_html)
+                self.image_file = image_file
+
+    def apply_function(self):
+        if self.filter_enabled:
+            self.ui.comboBox_categories.setEnabled(False)
+            self.filter_enabled = False
+            self.get_data_product()
+        else:
+            self.ui.comboBox_categories.setEnabled(True)
+            self.filter_enabled = True
+            self.filter_product()
+
+    def selected_category_products(self):
+        selected_category = self.ui.comboBox_categories.currentText()
+        if selected_category:
+            self.filter_enabled = True
+            self.filter_product()
+
+    def get_categories(self):
         try:
-            self.ui.comboBoxCategoriesProduct.currentIndexChanged.disconnect(self.get_data_categories_parent_category)
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT name_categories FROM categories ORDER BY name_categories;')
+                categories = cursor.fetchall()
+                self.ui.comboBox_categories.clear()
+                self.ui.comboBox_categories.addItems([category[0] for category in categories])
+                self.ui.comboBox_categories.currentIndexChanged.connect(self.selected_category_products)
+        except Exception as e:
+            print(f'Ошибка при получении категорий: {e}')
+
+    def get_categories_parent_category(self):
+        try:
+            self.ui.comboBoxCategoriesProduct.currentIndexChanged.disconnect(self.get_categories_parent_category)
+        except TypeError:
+            pass
+
+        try:
             with connection.cursor() as cursor:
                 cursor.execute('''
                     SELECT C.name_categories, PC.name
@@ -130,8 +174,140 @@ class MainWindow(QMainWindow):
                 ''')
                 categories = cursor.fetchall()
 
+                self.ui.comboBoxCategoriesProduct.clear()
+
                 self.ui.comboBoxCategoriesProduct.addItems(
                     [f'{category[0]} - {category[1]}' for category in categories])
+        except Exception as e:
+            print(f'Ошибка: {e}')
+        finally:
+            self.ui.comboBoxCategoriesProduct.currentIndexChanged.connect(self.get_categories_parent_category)
+
+    def filter_product(self):
+        select_category = self.ui.comboBox_categories.currentText()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('''
+                    SELECT P.name, I.url, C.name_categories, P.amount, P.price
+                    FROM product P
+                    JOIN image I ON P.id_image = I.id_image
+                    JOIN categories_parent_category CPC ON P.id_category = CPC.id_categories_parent_category
+                    JOIN parent_category PC ON CPC.id_parent_categories = PC.id_parent_category
+                    JOIN categories C ON CPC.id_categories = C.id_categories
+                    WHERE C.name_categories = %s;
+                ''', (select_category,))
+                records = cursor.fetchall()
+
+                self.model_table_product.clear()
+                self.model_table_product.setColumnCount(5)
+                self.model_table_product.setHorizontalHeaderLabels(
+                    ['Наименование', 'Изображение', 'категория', 'Количество', 'Цена'])
+                self.horizontal_header = self.ui.tableProductOrder.horizontalHeader()
+
+                for i in range(0, 5):
+                    self.horizontal_header.setSectionResizeMode(i, QHeaderView.Stretch)
+
+                for index, record in enumerate(records, start=1):
+                    self.model_table_product.appendRow([])
+                    for col, value in enumerate(record):
+                        if col == 1:
+                            pixmap = QPixmap()
+                            pixmap.loadFromData(value)
+                            scaled_pixmap = pixmap.scaled(QSize(150, 150), Qt.KeepAspectRatio)
+                            image_label = QLabel()
+                            image_label.setPixmap(scaled_pixmap)
+                            image_label.setAlignment(Qt.AlignCenter)
+                            self.ui.tableProductOrder.setIndexWidget(self.model_table_product.index(index - 1, col),
+                                                                     image_label)
+                        else:
+                            item = QStandardItem(str(value))
+                            self.model_table_product.setItem(index - 1, col, item)
+
+        except Exception as e:
+            print(f'Ошибка: {e}')
+
+    def search_product(self):
+        search_text = self.ui.lineEditSearch.text().strip()
+        try:
+            with connection.cursor() as cursor:
+                query = '''
+                    SELECT P.name, I.url, C.name_categories, P.amount, P.price
+                    FROM product P
+                    JOIN image I ON P.id_image = I.id_image
+                    JOIN categories_parent_category CPC ON P.id_category = CPC.id_categories_parent_category
+                    JOIN parent_category PC ON CPC.id_parent_categories = PC.id_parent_category
+                    JOIN categories C ON CPC.id_categories = C.id_categories
+                    WHERE LOWER(P.name) LIKE LOWER(%s) OR LOWER(C.name_categories) LIKE LOWER(%s);
+                '''
+                cursor.execute(query, ('%' + search_text + '%', '%' + search_text + '%'))
+                records = cursor.fetchall()
+
+                self.model_table_product.clear()
+                self.model_table_product.setColumnCount(5)
+                self.model_table_product.setHorizontalHeaderLabels(
+                    ['Наименование', 'Изображение', 'категория', 'Количество', 'Цена'])
+                self.horizontal_header = self.ui.tableProductOrder.horizontalHeader()
+
+                for i in range(0, 5):
+                    self.horizontal_header.setSectionResizeMode(i, QHeaderView.Stretch)
+
+                for index, record in enumerate(records, start=1):
+                    self.model_table_product.appendRow([])
+                    for col, value in enumerate(record):
+                        if col == 1:
+                            pixmap = QPixmap()
+                            pixmap.loadFromData(value)
+                            scaled_pixmap = pixmap.scaled(QSize(150, 150), Qt.KeepAspectRatio)
+                            image_label = QLabel()
+                            image_label.setPixmap(scaled_pixmap)
+                            image_label.setAlignment(Qt.AlignCenter)
+                            self.ui.tableProductOrder.setIndexWidget(self.model_table_product.index(index - 1, col),
+                                                                     image_label)
+                        else:
+                            item = QStandardItem(str(value))
+                            self.model_table_product.setItem(index - 1, col, item)
+
+        except Exception as e:
+            print(f'Ошибка при поиске товара: {e}')
+
+    def get_data_product(self):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('''
+                    SELECT P.name, I.url, C.name_categories, P.amount, P.price
+                    FROM product P
+                    JOIN image I ON P.id_image = I.id_image
+                    JOIN categories_parent_category CPC ON P.id_category = CPC.id_categories_parent_category
+                    JOIN parent_category PC ON CPC.id_parent_categories = PC.id_parent_category
+                    JOIN categories C ON CPC.id_categories = C.id_categories;
+                ''')
+                records = cursor.fetchall()
+
+                self.model_table_product.clear()
+                self.model_table_product.setColumnCount(5)
+                self.model_table_product.setHorizontalHeaderLabels(
+                    ['Наименование', 'Изображение', 'категория', 'Количество', 'Цена'])
+                self.horizontal_header = self.ui.tableProductOrder.horizontalHeader()
+
+                for i in range(0, 5):
+                    self.horizontal_header.setSectionResizeMode(i, QHeaderView.Stretch)
+
+                for index, record in enumerate(records, start=1):
+                    self.model_table_product.appendRow([])
+                    for col, value in enumerate(record):
+                        if col == 1:
+                            pixmap = QPixmap()
+                            pixmap.loadFromData(value)
+                            scaled_pixmap = pixmap.scaled(QSize(150, 150), Qt.KeepAspectRatio)
+                            image_label = QLabel()
+                            image_label.setPixmap(scaled_pixmap)
+                            image_label.setAlignment(Qt.AlignCenter)
+                            self.ui.tableProductOrder.setIndexWidget(self.model_table_product.index(index - 1, col),
+                                                                     image_label)
+                        else:
+                            item = QStandardItem(str(value))
+                            self.model_table_product.setItem(index - 1, col, item)
+
         except Exception as e:
             print(f'Ошибка: {e}')
 
@@ -139,13 +315,22 @@ class MainWindow(QMainWindow):
         try:
             with connection.cursor() as cursor:
                 name_product = self.ui.lineEditNameProduct.text()
-                image_product_text = self.ui.textEditImageProduct.toPlainText()
+
+                with open(self.image_file, 'rb') as f:
+                    image_data = f.read()
+
+                cursor.execute(
+                    'INSERT INTO image (url) VALUES (%s) RETURNING id_image;',
+                    (image_data,)
+                )
+                id_image = cursor.fetchone()[0]
+
                 combo_box_product = self.ui.comboBoxCategoriesProduct.currentText()
                 description_product = self.ui.textEditDescriptionProduct.toPlainText()
-                amount_product = int(self.ui.lineEditAmountProduct.text())
-                price_product = int(self.ui.lineEditPriceProduct.text())
+                amount_product = float(self.ui.lineEditAmountProduct.text())
+                price_product = float(self.ui.lineEditPriceProduct.text())
 
-                if name_product == '' or image_product_text == '' or combo_box_product == '' or description_product == '' \
+                if name_product == '' or self.image_file is None or combo_box_product == '' or description_product == '' \
                         or amount_product == '' or price_product == '':
                     show_error_message('Вы не ввели значения!')
                     return
@@ -162,8 +347,15 @@ class MainWindow(QMainWindow):
 
                 id_categories_parent_category = cursor.fetchone()
 
-                cursor.execute('INSERT INTO image (url) VALUES (%s) RETURNING id_image;', (image_product_text,))
-                id_image = cursor.fetchone()
+                cursor.execute('''
+                SELECT 1 FROM product
+                WHERE name = %s AND id_category = %s;
+                ''', (name_product, id_categories_parent_category))
+
+                existing_product = cursor.fetchone()
+                if existing_product:
+                    show_error_message('Такой товар уже существует!')
+                    return
 
                 cursor.execute(
                     'INSERT INTO product (name, id_image, id_category, description, amount, price) '
@@ -175,7 +367,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f'Ошибка: {e}')
             show_error_message('Ошибка при добавлении товара!')
-
         finally:
             self.ui.lineEditNameProduct.clear()
             self.ui.textEditImageProduct.clear()
@@ -183,7 +374,58 @@ class MainWindow(QMainWindow):
             self.ui.textEditDescriptionProduct.clear()
             self.ui.lineEditAmountProduct.clear()
             self.ui.lineEditPriceProduct.clear()
-            self.ui.Widget_pages.setCurrentWidget(self.ui.pageCatalog)
+            self.filter_product()
+            self.get_data_product()
+            self.ui.Widget_pages.setCurrentWidget(self.ui.pageProduct)
+
+    def get_data_categories(self):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('''
+                    SELECT C.name_categories, P.name
+                    FROM categories_parent_category CPC
+                    JOIN categories C ON CPC.id_categories = C.id_categories
+                    JOIN parent_category P ON CPC.id_parent_categories = P.id_parent_category
+                    ORDER BY P.id_parent_category;
+                ''')
+                records = cursor.fetchall()
+
+                self.model_table_categories.clear()
+                self.model_table_categories.setColumnCount(4)
+                self.model_table_categories.setHorizontalHeaderLabels(
+                    ['Имя категории', 'Имя родительской категории', '', ''])
+                self.horizontal_header = self.ui.tableAddCategories.horizontalHeader()
+
+                for i in range(0, 2):
+                    self.horizontal_header.setSectionResizeMode(i, QHeaderView.Stretch)
+
+                for i in range(2, 4):
+                    self.horizontal_header.setSectionResizeMode(i, QHeaderView.Fixed)
+                    self.horizontal_header.resizeSection(i, 65)
+
+                for index, record in enumerate(records, start=1):
+                    self.model_table_categories.appendRow([])
+                    for col, value in enumerate(record):
+                        item = QStandardItem(str(value))
+                        self.model_table_categories.setItem(index - 1, col, item)
+
+                    edit_button = QPushButton(self)
+                    edit_button.setFixedSize(60, 60)
+                    edit_button.setIcon(QIcon(
+                        QPixmap(directory + f'/icon/edit.png').scaled(QSize(60, 60))))
+                    edit_button.clicked.connect(lambda _, i=index - 1: self.edit_categories(i))
+                    self.ui.tableAddCategories.setIndexWidget(self.model_table_categories.index(index - 1, 2),
+                                                              edit_button)
+                    delete_button = QPushButton(self)
+                    delete_button.setFixedSize(60, 60)
+                    delete_button.setIcon(QIcon(QPixmap(directory + f'/icon/delete.png').scaled(QSize(60, 60))))
+                    delete_button.clicked.connect(lambda _, i=index - 1: self.delete_categories(i))
+                    self.ui.tableAddCategories.setIndexWidget(self.model_table_categories.index(index - 1, 3),
+                                                              delete_button)
+                self.ui.tableAddCategories.verticalHeader().setDefaultSectionSize(65)
+
+        except Exception as e:
+            print(f'Ошибка: {e}')
 
     def insert_data_categories(self):
         try:
@@ -248,56 +490,8 @@ class MainWindow(QMainWindow):
             self.ui.lineEditNameCategory.clear()
             self.ui.lineEditParentCategory.clear()
             self.get_data_categories()
+            self.get_categories_parent_category()
             self.ui.Widget_pages.setCurrentWidget(self.ui.pageCategories)
-
-    def get_data_categories(self):
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute('''
-                    SELECT C.name_categories, P.name
-                    FROM categories_parent_category CPC
-                    JOIN categories C ON CPC.id_categories = C.id_categories
-                    JOIN parent_category P ON CPC.id_parent_categories = P.id_parent_category
-                    ORDER BY P.id_parent_category;
-                ''')
-                records = cursor.fetchall()
-
-                self.model_table_categories.clear()
-                self.model_table_categories.setColumnCount(4)
-                self.model_table_categories.setHorizontalHeaderLabels(
-                    ['Имя категории', 'Имя родительской категории', '', ''])
-                self.horizontal_header = self.ui.tableAddCategories.horizontalHeader()
-
-                for i in range(0, 2):
-                    self.horizontal_header.setSectionResizeMode(i, QHeaderView.Stretch)
-
-                for i in range(2, 4):
-                    self.horizontal_header.setSectionResizeMode(i, QHeaderView.Fixed)
-                    self.horizontal_header.resizeSection(i, 65)
-
-                for index, record in enumerate(records, start=1):
-                    self.model_table_categories.appendRow([])
-                    for col, value in enumerate(record):
-                        item = QStandardItem(str(value))
-                        self.model_table_categories.setItem(index - 1, col, item)
-
-                    edit_button = QPushButton(self)
-                    edit_button.setFixedSize(60, 60)
-                    edit_button.setIcon(QIcon(
-                        QPixmap(directory + f'/icon/edit.png').scaled(QSize(60, 60))))
-                    edit_button.clicked.connect(lambda _, i=index - 1: self.edit_categories(i))
-                    self.ui.tableAddCategories.setIndexWidget(self.model_table_categories.index(index - 1, 2),
-                                                              edit_button)
-                    delete_button = QPushButton(self)
-                    delete_button.setFixedSize(60, 60)
-                    delete_button.setIcon(QIcon(QPixmap(directory + f'/icon/delete.png').scaled(QSize(60, 60))))
-                    delete_button.clicked.connect(lambda _, i=index - 1: self.delete_categories(i))
-                    self.ui.tableAddCategories.setIndexWidget(self.model_table_categories.index(index - 1, 3),
-                                                              delete_button)
-                self.ui.tableAddCategories.verticalHeader().setDefaultSectionSize(65)
-
-        except Exception as e:
-            print(f'Ошибка: {e}')
 
     def edit_categories(self, row):
         try:
@@ -333,6 +527,7 @@ class MainWindow(QMainWindow):
             show_error_message('Ошибка при обновлении категории.')
 
         finally:
+            self.get_categories_parent_category()
             self.get_data_categories()
             self.ui.Widget_pages.setCurrentWidget(self.ui.pageCategories)
 
@@ -370,8 +565,9 @@ class MainWindow(QMainWindow):
             show_error_message('Ошибка при удалении записи.')
 
         finally:
-            self.get_data_categories()
             self.ui.Widget_pages.setCurrentWidget(self.ui.pageCategories)
+            self.get_data_categories()
+            self.get_categories_parent_category()
 
     def animate_menu_width(self, enable):
         width = self.ui.frameLeftMenu.width()
