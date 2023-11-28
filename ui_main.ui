@@ -500,7 +500,7 @@ font: bold;</string>
             <item>
              <widget class="QStackedWidget" name="Widget_pages">
               <property name="currentIndex">
-               <number>4</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="pageCatalog">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -654,7 +654,7 @@ font: bold;</string>
                          <widget class="QPushButton" name="search">
                           <property name="minimumSize">
                            <size>
-                            <width>85</width>
+                            <width>115</width>
                             <height>35</height>
                            </size>
                           </property>
@@ -682,11 +682,27 @@ font: bold;</string>
                        </layout>
                       </widget>
                      </item>
-                     <item row="1" column="0">
-                      <widget class="QTableWidget" name="tableCatalogProduct"/>
-                     </item>
                      <item row="1" column="1">
-                      <widget class="QTableWidget" name="tableCatalogOrder"/>
+                      <widget class="QTableWidget" name="tableCatalogOrder">
+                       <property name="styleSheet">
+                        <string notr="true">font: 75 10pt &quot;Montserrat&quot;;
+font: bold;</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QTableView" name="tableProductOrder">
+                       <property name="styleSheet">
+                        <string notr="true">font: 75 10pt &quot;Montserrat&quot;;
+font: bold;</string>
+                       </property>
+                       <attribute name="verticalHeaderDefaultSectionSize">
+                        <number>150</number>
+                       </attribute>
+                       <attribute name="verticalHeaderMinimumSectionSize">
+                        <number>60</number>
+                       </attribute>
+                      </widget>
                      </item>
                     </layout>
                    </item>
@@ -1290,7 +1306,7 @@ font: bold;</string>
                       </layout>
                      </item>
                      <item row="1" column="0">
-                      <widget class="QTableWidget" name="tableProduct"/>
+                      <widget class="QTableView" name="tableProduct"/>
                      </item>
                     </layout>
                    </item>
@@ -1415,8 +1431,44 @@ font: bold;</string>
                        </item>
                        <item>
                         <widget class="QTextEdit" name="textEditImageProduct">
+                         <property name="enabled">
+                          <bool>true</bool>
+                         </property>
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                           <horstretch>150</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>150</width>
+                           <height>0</height>
+                          </size>
+                         </property>
+                         <property name="maximumSize">
+                          <size>
+                           <width>400</width>
+                           <height>16777215</height>
+                          </size>
+                         </property>
+                         <property name="focusPolicy">
+                          <enum>Qt::ClickFocus</enum>
+                         </property>
+                         <property name="contextMenuPolicy">
+                          <enum>Qt::NoContextMenu</enum>
+                         </property>
                          <property name="styleSheet">
                           <string notr="true"/>
+                         </property>
+                         <property name="verticalScrollBarPolicy">
+                          <enum>Qt::ScrollBarAsNeeded</enum>
+                         </property>
+                         <property name="horizontalScrollBarPolicy">
+                          <enum>Qt::ScrollBarAsNeeded</enum>
+                         </property>
+                         <property name="readOnly">
+                          <bool>true</bool>
                          </property>
                         </widget>
                        </item>
