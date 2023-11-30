@@ -488,7 +488,12 @@ class Ui_MainWindow(object):
         self.horizontalLayout_11.addWidget(self.addProductList)
         self.gridLayout.addLayout(self.horizontalLayout_11, 0, 0, 1, 1)
         self.tableProduct = QtWidgets.QTableView(self.frame_5)
+        self.tableProduct.setStyleSheet("font: 75 10pt \"Montserrat\";\n"
+"font: bold;")
         self.tableProduct.setObjectName("tableProduct")
+        self.tableProduct.horizontalHeader().setStretchLastSection(False)
+        self.tableProduct.verticalHeader().setDefaultSectionSize(150)
+        self.tableProduct.verticalHeader().setMinimumSectionSize(60)
         self.gridLayout.addWidget(self.tableProduct, 1, 0, 1, 1)
         self.horizontalLayout_9.addLayout(self.gridLayout)
         self.horizontalLayout_8.addWidget(self.frame_5)
@@ -984,7 +989,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
-        self.Widget_pages.setCurrentIndex(0)
+        self.Widget_pages.setCurrentIndex(3)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
