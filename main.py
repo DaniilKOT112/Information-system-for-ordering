@@ -1,9 +1,10 @@
+import base64
 import os
 import sys
 from functools import partial
 
-from PyQt5.QtCore import QPropertyAnimation, QSize, QRegExp, Qt, QUrl
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QRegExpValidator
+from PyQt5.QtCore import QPropertyAnimation, QSize, QRegExp, Qt, QUrl, QByteArray
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QRegExpValidator, QTextDocument
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QPushButton, QHeaderView, QFileDialog, QLabel
 
 from database import connection
@@ -29,7 +30,11 @@ def show_error_message(message):
 def get_category_id(categories_name):
     try:
         with connection.cursor() as cursor:
-            cursor.execute('SELECT id_categories FROM categories WHERE name_categories = %s;', (categories_name,))
+            cursor.execute('''
+                SELECT id_categories 
+                FROM categories 
+                WHERE name_categories = %s;
+                ''', (categories_name,))
             result = cursor.fetchone()
             if result:
                 return result[0]
@@ -43,7 +48,11 @@ def get_category_id(categories_name):
 def get_parent_category_id(parent_category_name):
     try:
         with connection.cursor() as cursor:
-            cursor.execute('SELECT id_parent_category FROM parent_category WHERE name = %s;', (parent_category_name,))
+            cursor.execute('''
+                SELECT id_parent_category 
+                FROM parent_category 
+                WHERE name = %s;
+                ''', (parent_category_name,))
             result = cursor.fetchone()
             if result:
                 return result[0]
@@ -54,9 +63,47 @@ def get_parent_category_id(parent_category_name):
         return None
 
 
+def get_image_for_product(product_name):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('''
+                SELECT i.url
+                FROM image i
+                JOIN product p ON i.id_image = p.id_image
+                WHERE p.name = %s;
+                ''', (product_name,))
+            result = cursor.fetchone()
+            if result:
+                return result[0]
+            else:
+                return None
+    except Exception as e:
+        print(f'Ошибка: {e}')
+        return None
+
+
+def get_category_for_product(product_name):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('''
+                SELECT C.name_categories
+                FROM product P
+                JOIN categories_parent_category CPC ON P.id_category = CPC.id_categories
+                JOIN categories C ON CPC.id_categories = C.id_categories
+                WHERE P.name = %s;
+                ''', (product_name,))
+            result = cursor.fetchone()
+            if result:
+                return result[0]
+    except Exception as e:
+        print(f'Ошибка: {e}')
+        return None
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
+        self.image_file_2 = None
         self.current_edit_parent_categories_id = None
         self.current_edit_categories_id = None
         self.vertical_header = None
@@ -85,7 +132,9 @@ class MainWindow(QMainWindow):
             partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCategories))
         self.ui.cancelEditCategories.clicked.connect(
             partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCategories))
+        self.ui.cancelEditProduct.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageProduct))
 
+        # self.ui.applyEditProduct.clicked.connect(self.update_product)
         self.ui.search.clicked.connect(self.search_product)
         self.ui.filters.clicked.connect(self.apply_function)
         self.filter_enabled = False
@@ -93,7 +142,6 @@ class MainWindow(QMainWindow):
         self.ui.addCategories.clicked.connect(self.insert_data_categories)
         self.ui.addProduct.clicked.connect(self.insert_data_product)
         self.ui.applyEditCategories.clicked.connect(self.update_categories)
-        self.ui.comboBoxCategoriesProduct.currentIndexChanged.connect(self.get_categories_parent_category)
 
         self.ui.textEditImageProduct.mousePressEvent = self.open_image_dialog
 
@@ -101,12 +149,17 @@ class MainWindow(QMainWindow):
         self.ui.tableAddCategories.setModel(self.model_table_categories)
         self.model_table_product = QStandardItemModel()
         self.ui.tableProductOrder.setModel(self.model_table_product)
+        self.model_table_main_product = QStandardItemModel()
+        self.ui.tableProduct.setModel(self.model_table_main_product)
 
-        self.get_categories_parent_category()
         self.filter_product()
-        self.get_categories()
+
+        self.get_data_main_product()
+        self.get_categories_parent_category()
         self.get_data_product()
         self.get_data_categories()
+        self.get_categories()
+
         self.ui.comboBox_categories.setEnabled(False)
 
         self.ui.lineEditNameCategory.setValidator(russian_validator)
@@ -118,6 +171,17 @@ class MainWindow(QMainWindow):
 
         self.ui.lineEditAmountProduct.setValidator(integer)
         self.ui.lineEditPriceProduct.setValidator(real)
+
+    def open_image_dialog_2(self, event):
+        if event.button() == Qt.LeftButton:
+            image_file, _ = QFileDialog.getOpenFileName(self, 'Select Image', '',
+                                                        'Image Files (*.png *.jpg *.bmp *.gif *.jpeg)')
+            if image_file:
+                url = QUrl.fromLocalFile(image_file)
+                image_html = f'<img src="{url.toString()}" width="370">'
+                self.ui.textEditImageProduct_2.clear()
+                self.ui.textEditImageProduct_2.setHtml(image_html)
+                self.image_file_2 = image_file
 
     def open_image_dialog(self, event):
         if event.button() == Qt.LeftButton:
@@ -139,6 +203,7 @@ class MainWindow(QMainWindow):
             self.ui.comboBox_categories.setEnabled(True)
             self.filter_enabled = True
             self.filter_product()
+            self.get_categories()
 
     def selected_category_products(self):
         selected_category = self.ui.comboBox_categories.currentText()
@@ -149,20 +214,19 @@ class MainWindow(QMainWindow):
     def get_categories(self):
         try:
             with connection.cursor() as cursor:
-                cursor.execute('SELECT name_categories FROM categories ORDER BY name_categories;')
+                cursor.execute('''
+                    SELECT name_categories 
+                    FROM categories 
+                    ORDER BY name_categories;
+                    ''')
                 categories = cursor.fetchall()
                 self.ui.comboBox_categories.clear()
                 self.ui.comboBox_categories.addItems([category[0] for category in categories])
                 self.ui.comboBox_categories.currentIndexChanged.connect(self.selected_category_products)
         except Exception as e:
-            print(f'Ошибка при получении категорий: {e}')
+            print(f'Ошибка: {e}')
 
     def get_categories_parent_category(self):
-        try:
-            self.ui.comboBoxCategoriesProduct.currentIndexChanged.disconnect(self.get_categories_parent_category)
-        except TypeError:
-            pass
-
         try:
             with connection.cursor() as cursor:
                 cursor.execute('''
@@ -175,13 +239,10 @@ class MainWindow(QMainWindow):
                 categories = cursor.fetchall()
 
                 self.ui.comboBoxCategoriesProduct.clear()
-
                 self.ui.comboBoxCategoriesProduct.addItems(
                     [f'{category[0]} - {category[1]}' for category in categories])
         except Exception as e:
             print(f'Ошибка: {e}')
-        finally:
-            self.ui.comboBoxCategoriesProduct.currentIndexChanged.connect(self.get_categories_parent_category)
 
     def filter_product(self):
         select_category = self.ui.comboBox_categories.currentText()
@@ -230,7 +291,7 @@ class MainWindow(QMainWindow):
         search_text = self.ui.lineEditSearch.text().strip()
         try:
             with connection.cursor() as cursor:
-                query = '''
+                cursor.execute('''
                     SELECT P.name, I.url, C.name_categories, P.amount, P.price
                     FROM product P
                     JOIN image I ON P.id_image = I.id_image
@@ -238,8 +299,7 @@ class MainWindow(QMainWindow):
                     JOIN parent_category PC ON CPC.id_parent_categories = PC.id_parent_category
                     JOIN categories C ON CPC.id_categories = C.id_categories
                     WHERE LOWER(P.name) LIKE LOWER(%s) OR LOWER(C.name_categories) LIKE LOWER(%s);
-                '''
-                cursor.execute(query, ('%' + search_text + '%', '%' + search_text + '%'))
+                ''', ('%' + search_text + '%', '%' + search_text + '%'))
                 records = cursor.fetchall()
 
                 self.model_table_product.clear()
@@ -266,9 +326,67 @@ class MainWindow(QMainWindow):
                         else:
                             item = QStandardItem(str(value))
                             self.model_table_product.setItem(index - 1, col, item)
-
         except Exception as e:
-            print(f'Ошибка при поиске товара: {e}')
+            print(f'Ошибка: {e}')
+
+    def get_data_main_product(self):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('''
+                        SELECT P.name, I.url, C.name_categories, P.description, P.amount, P.price
+                        FROM product P
+                        JOIN image I ON P.id_image = I.id_image
+                        JOIN categories_parent_category CPC ON P.id_category = CPC.id_categories_parent_category
+                        JOIN parent_category PC ON CPC.id_parent_categories = PC.id_parent_category
+                        JOIN categories C ON CPC.id_categories = C.id_categories;
+                    ''')
+                records = cursor.fetchall()
+
+                self.model_table_main_product.clear()
+                self.model_table_main_product.setColumnCount(8)
+                self.model_table_main_product.setHorizontalHeaderLabels(
+                    ['Наименование', 'Изображение', 'Категория', 'Описание', 'Количество', 'Цена', '', ''])
+                self.horizontal_header = self.ui.tableProduct.horizontalHeader()
+
+                for i in range(0, 6):
+                    self.horizontal_header.setSectionResizeMode(i, QHeaderView.Stretch)
+
+                for i in range(6, 8):
+                    self.horizontal_header.setSectionResizeMode(i, QHeaderView.Fixed)
+                    self.horizontal_header.resizeSection(i, 65)
+
+                for index, record in enumerate(records, start=1):
+                    self.model_table_main_product.appendRow([])
+                    for col, value in enumerate(record):
+                        if col == 1:
+                            pixmap = QPixmap()
+                            pixmap.loadFromData(value)
+                            scaled_pixmap = pixmap.scaled(QSize(150, 150), Qt.KeepAspectRatio)
+                            image_label = QLabel()
+                            image_label.setPixmap(scaled_pixmap)
+                            image_label.setAlignment(Qt.AlignCenter)
+                            self.ui.tableProduct.setIndexWidget(self.model_table_main_product.index(index - 1, col),
+                                                                image_label)
+                        else:
+                            item = QStandardItem(str(value))
+                            self.model_table_main_product.setItem(index - 1, col, item)
+
+                    edit_button = QPushButton(self)
+                    edit_button.setFixedSize(60, 60)
+                    edit_button.setIcon(QIcon(
+                        QPixmap(directory + f'/icon/edit.png').scaled(QSize(60, 60))))
+                    edit_button.clicked.connect(lambda _, i=index - 1: self.edit_product(i))
+                    self.ui.tableProduct.setIndexWidget(self.model_table_main_product.index(index - 1, 6),
+                                                        edit_button)
+                    delete_button = QPushButton(self)
+                    delete_button.setFixedSize(60, 60)
+                    delete_button.setIcon(QIcon(QPixmap(directory + f'/icon/delete.png').scaled(QSize(60, 60))))
+                    # delete_button.clicked.connect(lambda _, i=index - 1: self.delete_categories(i))
+                    self.ui.tableProduct.setIndexWidget(self.model_table_main_product.index(index - 1, 7),
+                                                        delete_button)
+                    self.ui.tableProduct.verticalHeader().setDefaultSectionSize(65)
+        except Exception as e:
+            print(f'Ошибка: {e}')
 
     def get_data_product(self):
         try:
@@ -286,7 +404,7 @@ class MainWindow(QMainWindow):
                 self.model_table_product.clear()
                 self.model_table_product.setColumnCount(5)
                 self.model_table_product.setHorizontalHeaderLabels(
-                    ['Наименование', 'Изображение', 'категория', 'Количество', 'Цена'])
+                    ['Наименование', 'Изображение', 'Категория', 'Количество', 'Цена'])
                 self.horizontal_header = self.ui.tableProductOrder.horizontalHeader()
 
                 for i in range(0, 5):
@@ -319,10 +437,7 @@ class MainWindow(QMainWindow):
                 with open(self.image_file, 'rb') as f:
                     image_data = f.read()
 
-                cursor.execute(
-                    'INSERT INTO image (url) VALUES (%s) RETURNING id_image;',
-                    (image_data,)
-                )
+                cursor.execute('INSERT INTO image (url) VALUES (%s) RETURNING id_image;', (image_data,))
                 id_image = cursor.fetchone()[0]
 
                 combo_box_product = self.ui.comboBoxCategoriesProduct.currentText()
@@ -348,8 +463,8 @@ class MainWindow(QMainWindow):
                 id_categories_parent_category = cursor.fetchone()
 
                 cursor.execute('''
-                SELECT 1 FROM product
-                WHERE name = %s AND id_category = %s;
+                    SELECT 1 FROM product
+                    WHERE name = %s AND id_category = %s;
                 ''', (name_product, id_categories_parent_category))
 
                 existing_product = cursor.fetchone()
@@ -357,12 +472,11 @@ class MainWindow(QMainWindow):
                     show_error_message('Такой товар уже существует!')
                     return
 
-                cursor.execute(
-                    'INSERT INTO product (name, id_image, id_category, description, amount, price) '
-                    'VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_product;',
-                    (name_product, id_image, id_categories_parent_category, description_product, amount_product,
-                     price_product)
-                )
+                cursor.execute('''
+                    INSERT INTO product (name, id_image, id_category, description, amount, price)
+                    VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_product;
+                    ''', (name_product, id_image, id_categories_parent_category, description_product, amount_product,
+                          price_product))
             connection.commit()
         except Exception as e:
             print(f'Ошибка: {e}')
@@ -375,8 +489,145 @@ class MainWindow(QMainWindow):
             self.ui.lineEditAmountProduct.clear()
             self.ui.lineEditPriceProduct.clear()
             self.filter_product()
+            self.get_categories()
             self.get_data_product()
+            self.get_data_main_product()
             self.ui.Widget_pages.setCurrentWidget(self.ui.pageProduct)
+
+    # def update_product(self):
+    #     try:
+    #         with connection.cursor() as cursor:
+    #             name_product = self.ui.lineEditNameProduct_2.text()
+    #
+    #             if self.image_file_2 is not None:
+    #                 with open(self.image_file_2, 'rb') as f:
+    #                     image_data = f.read()
+    #
+    #                 cursor.execute(
+    #                     'UPDATE image SET url = %s WHERE id_image = (SELECT id_image FROM product WHERE name = %s) RETURNING id_image;',
+    #                     (image_data, name_product))
+    #
+    #                 fetch_result = cursor.fetchone()
+    #
+    #                 if fetch_result is not None:
+    #                     id_image = fetch_result[0]
+    #                 else:
+    #                     id_image = None
+    #             else:
+    #                 cursor.execute('SELECT id_image FROM product WHERE name = %s;', (name_product,))
+    #                 fetch_result = cursor.fetchone()
+    #                 id_image = fetch_result[0] if fetch_result is not None else None
+    #
+    #             combo_box_product = self.ui.comboBoxCategoriesProduct_2.currentText()
+    #             description_product = self.ui.textEditDescriptionProduct_2.toPlainText()
+    #             amount_product = float(self.ui.lineEditAmountProduct_2.text())
+    #
+    #             try:
+    #                 price_product = float(self.ui.lineEditPriceProduct_2.text())
+    #             except ValueError:
+    #                 show_error_message('Некорректное значение для цены!')
+    #                 return
+    #
+    #             if combo_box_product == '' or description_product == '' or amount_product == '':
+    #                 show_error_message('Вы не ввели значения!')
+    #                 return
+    #
+    #             category_name, parent_category_name = combo_box_product.split(' - ')
+    #
+    #             cursor.execute('''
+    #                 SELECT CPC.id_categories_parent_category
+    #                 FROM categories_parent_category CPC
+    #                 JOIN categories C ON CPC.id_categories = C.id_categories
+    #                 JOIN parent_category PC ON CPC.id_parent_categories = PC.id_parent_category
+    #                 WHERE C.name_categories = %s AND PC.name = %s;
+    #             ''', (category_name, parent_category_name))
+    #
+    #             id_categories_parent_category = cursor.fetchone()[0]
+    #
+    #             update_query = '''
+    #                 UPDATE product
+    #                 SET name = %s, id_image = %s, id_category = %s, description = %s, amount = %s, price = %s
+    #                 WHERE id_product = (SELECT id_product FROM product WHERE name = %s LIMIT 1)
+    #                 RETURNING name;
+    #             '''
+    #             print("Update query:", cursor.mogrify(update_query, (
+    #                 name_product, id_image, id_categories_parent_category, description_product, amount_product,
+    #                 price_product, name_product)))
+    #
+    #             cursor.execute(update_query, (
+    #                 name_product, id_image, id_categories_parent_category, description_product, amount_product,
+    #                 price_product, name_product))
+    #
+    #             updated_name = cursor.fetchone()[0]
+    #
+    #         connection.commit()
+    #
+    #         new_image_url = get_image_for_product(updated_name)
+    #
+    #         if new_image_url:
+    #             image_data_bytes = bytes(new_image_url)
+    #             pixmap = QPixmap()
+    #             pixmap.loadFromData(QByteArray.fromBase64(image_data_bytes))
+    #
+    #             self.ui.textEditImageProduct_2.clear()
+    #             self.ui.textEditImageProduct_2.document().addResource(QTextDocument.ImageResource, QUrl("image"),
+    #                                                                   pixmap)
+    #             self.ui.textEditImageProduct_2.insertHtml(f'<img src="image" width="370">')
+    #             print(f'Image updated successfully for product: {updated_name}')
+    #
+    #     finally:
+    #         self.filter_product()
+    #         self.get_data_product()
+    #         self.get_categories()
+    #         self.get_data_main_product()
+    #         self.ui.Widget_pages.setCurrentWidget(self.ui.pageProduct)
+
+    def edit_product(self, row):
+        try:
+            self.ui.Widget_pages.setCurrentWidget(self.ui.pageEditProduct)
+            name_product = self.model_table_main_product.item(row, 0).text()
+            description_product = self.model_table_main_product.item(row, 3).text()
+            amount_product = self.model_table_main_product.item(row, 4).text()
+            price_product = self.model_table_main_product.item(row, 5).text()
+            image_product = get_image_for_product(name_product)
+
+            if image_product:
+                image_base64 = base64.b64encode(image_product).decode('utf-8')
+                image_html = f'<img src="data:image/png;base64,{image_base64}" width="370">'
+                self.ui.textEditImageProduct_2.clear()
+                self.ui.textEditImageProduct_2.setHtml(image_html)
+
+            self.ui.textEditImageProduct_2.mousePressEvent = lambda event: self.open_image_dialog_2(event)
+
+            category_product = get_category_for_product(name_product)
+
+            self.ui.lineEditNameProduct_2.setText(name_product)
+            self.ui.textEditDescriptionProduct_2.setPlainText(description_product)
+            self.ui.lineEditAmountProduct_2.setText(amount_product)
+            self.ui.lineEditPriceProduct_2.setText(price_product)
+            self.populate_categories_combo_box_2()
+
+            if image_product is None:
+                self.ui.textEditImageProduct_2.clear()
+            if category_product:
+                index = self.ui.comboBoxCategoriesProduct_2.findText(category_product)
+                if index != -1:
+                    self.ui.comboBoxCategoriesProduct_2.setCurrentIndex(index)
+        except Exception as e:
+            print(f'Ошибка: {e}')
+
+    def populate_categories_combo_box_2(self):
+        with connection.cursor() as cursor:
+            cursor.execute('''
+                SELECT C.name_categories, PC.name 
+                FROM categories_parent_category CPC 
+                JOIN categories C ON CPC.id_categories = C.id_categories
+                JOIN parent_category PC ON CPC.id_parent_categories = PC.id_parent_category
+            ''')
+            categories = cursor.fetchall()
+            category_names = [f'{name} - {parent}' for name, parent in categories]
+            self.ui.comboBoxCategoriesProduct_2.clear()
+            self.ui.comboBoxCategoriesProduct_2.addItems(category_names)
 
     def get_data_categories(self):
         try:
@@ -437,9 +688,13 @@ class MainWindow(QMainWindow):
                     show_error_message('Вы не ввели значения!')
                     return
 
-                cursor.execute('SELECT id_categories FROM categories WHERE name_categories = %s;', (name_categories,))
-                existing_category = cursor.fetchone()
+                cursor.execute('''
+                    SELECT id_categories 
+                    FROM categories 
+                    WHERE name_categories = %s;
+                    ''', (name_categories,))
 
+                existing_category = cursor.fetchone()
                 if existing_category:
                     id_categories = existing_category[0]
                 else:
@@ -452,7 +707,10 @@ class MainWindow(QMainWindow):
                         show_error_message('Ошибка при добавлении записи в категории!')
                         return
 
-                cursor.execute('SELECT id_parent_category FROM parent_category WHERE name = %s;', (parent_categories,))
+                cursor.execute('''
+                    SELECT id_parent_category 
+                    FROM parent_category 
+                    WHERE name = %s;''', (parent_categories,))
                 existing_parent_category = cursor.fetchone()
 
                 if existing_parent_category:
@@ -468,13 +726,15 @@ class MainWindow(QMainWindow):
                     show_error_message('Ошибка при добавлении родительской категории!')
                     return
 
-                cursor.execute(
-                    'SELECT 1 FROM categories_parent_category WHERE id_categories = %s AND id_parent_categories = %s;',
-                    (id_categories, id_parent_category))
+                cursor.execute('''
+                SELECT 1 
+                FROM categories_parent_category 
+                WHERE id_categories = %s AND id_parent_categories = %s;
+                ''', (id_categories, id_parent_category))
                 existing_relation = cursor.fetchone()
 
                 if existing_relation:
-                    show_error_message('Такая связь между категорией и родительской категорией уже существует!')
+                    show_error_message('Cвязь между категорией и родительской категорией уже существует!')
                     return
 
                 cursor.execute(
@@ -540,34 +800,43 @@ class MainWindow(QMainWindow):
                 categories_id = get_category_id(categories_name)
                 parent_categories_id = get_parent_category_id(parent_categories_name)
 
-                cursor.execute(
-                    'DELETE FROM categories_parent_category WHERE id_categories = %s AND id_parent_categories = %s;',
-                    (categories_id, parent_categories_id))
+                cursor.execute('''
+                    DELETE FROM categories_parent_category 
+                    WHERE id_categories = %s AND id_parent_categories = %s;''', (categories_id, parent_categories_id))
 
-                cursor.execute('SELECT 1 FROM categories_parent_category WHERE id_categories = %s;', (categories_id,))
+                cursor.execute('''
+                    SELECT 1 
+                    FROM categories_parent_category 
+                    WHERE id_categories = %s;''', (categories_id,))
                 existing_relations = cursor.fetchall()
 
                 if not existing_relations:
-                    cursor.execute('DELETE FROM categories WHERE id_categories = %s;', (categories_id,))
+                    cursor.execute('''
+                        DELETE FROM categories 
+                        WHERE id_categories = %s;''', (categories_id,))
 
-                cursor.execute('SELECT 1 FROM categories_parent_category WHERE id_parent_categories = %s;',
-                               (parent_categories_id,))
+                cursor.execute('''
+                    SELECT 1 
+                    FROM categories_parent_category 
+                    WHERE id_parent_categories = %s;''', (parent_categories_id,))
                 existing_relations = cursor.fetchall()
 
                 if not existing_relations:
-                    cursor.execute('DELETE FROM parent_category WHERE id_parent_category = %s;',
-                                   (parent_categories_id,))
+                    cursor.execute('''
+                    DELETE FROM parent_category 
+                    WHERE id_parent_category = %s;''', (parent_categories_id,))
 
                 connection.commit()
-
         except Exception as e:
             print(f'Ошибка: {e}')
             show_error_message('Ошибка при удалении записи.')
 
         finally:
             self.ui.Widget_pages.setCurrentWidget(self.ui.pageCategories)
+            self.get_data_main_product()
             self.get_data_categories()
             self.get_categories_parent_category()
+            self.get_data_product()
 
     def animate_menu_width(self, enable):
         width = self.ui.frameLeftMenu.width()

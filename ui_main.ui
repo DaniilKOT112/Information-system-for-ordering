@@ -500,7 +500,7 @@ font: bold;</string>
             <item>
              <widget class="QStackedWidget" name="Widget_pages">
               <property name="currentIndex">
-               <number>0</number>
+               <number>5</number>
               </property>
               <widget class="QWidget" name="pageCatalog">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -1306,7 +1306,21 @@ font: bold;</string>
                       </layout>
                      </item>
                      <item row="1" column="0">
-                      <widget class="QTableView" name="tableProduct"/>
+                      <widget class="QTableView" name="tableProduct">
+                       <property name="styleSheet">
+                        <string notr="true">font: 75 10pt &quot;Montserrat&quot;;
+font: bold;</string>
+                       </property>
+                       <attribute name="horizontalHeaderStretchLastSection">
+                        <bool>false</bool>
+                       </attribute>
+                       <attribute name="verticalHeaderDefaultSectionSize">
+                        <number>150</number>
+                       </attribute>
+                       <attribute name="verticalHeaderMinimumSectionSize">
+                        <number>60</number>
+                       </attribute>
+                      </widget>
                      </item>
                     </layout>
                    </item>
