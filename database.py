@@ -54,15 +54,12 @@ CREATE TABLE IF NOT EXISTS public.product
     CONSTRAINT categories_parent_categories FOREIGN KEY (id_category)
         REFERENCES public.categories_parent_category (id_categories_parent_category) MATCH SIMPLE
         ON UPDATE CASCADE
-        ON DELETE CASCADE
-        NOT VALID,
+        ON DELETE CASCADE,
     CONSTRAINT image FOREIGN KEY (id_image)
         REFERENCES public.image (id_image) MATCH SIMPLE
         ON UPDATE CASCADE
         ON DELETE CASCADE
-        NOT VALID
 );
-
 
 CREATE TABLE IF NOT EXISTS public.image
 (
