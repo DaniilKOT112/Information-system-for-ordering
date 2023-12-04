@@ -377,10 +377,10 @@ class MainWindow(QMainWindow):
 
                 combo_box_product = self.ui.comboBoxCategoriesProduct.currentText()
                 description_product = self.ui.textEditDescriptionProduct.toPlainText()
-                amount_product = float(self.ui.lineEditAmountProduct.text())
-                price_product = float(self.ui.lineEditPriceProduct.text())
+                amount_product = self.ui.lineEditAmountProduct.text()
+                price_product = self.ui.lineEditPriceProduct.text()
 
-                if name_product == '' or self.image_file is None or combo_box_product == '' or description_product == '' \
+                if name_product == '' or self.image_file is None or description_product == '' \
                         or amount_product == '' or price_product == '':
                     show_error_message('Вы не ввели значения!')
                     return
@@ -513,7 +513,7 @@ class MainWindow(QMainWindow):
             self.ui.textEditDescriptionProduct_2.setPlainText(description_product)
             self.ui.lineEditAmountProduct_2.setText(amount_product)
             self.ui.lineEditPriceProduct_2.setText(price_product.replace('$', ''))
-            self.populate_categories_combo_box_2()
+            self.get_categories_parent_category_2()
 
             if image_product is None:
                 self.ui.textEditImageProduct_2.clear()
@@ -524,7 +524,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f'Ошибка: {e}')
 
-    def populate_categories_combo_box_2(self):
+    def get_categories_parent_category_2(self):
         with connection.cursor() as cursor:
             cursor.execute('''
                 SELECT C.name_categories, PC.name 
