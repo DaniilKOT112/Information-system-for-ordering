@@ -7,10 +7,11 @@ from functools import partial
 from PyQt5.QtCore import QPropertyAnimation, QSize, QRegExp, Qt, QUrl
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QRegExpValidator
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QPushButton, QHeaderView, QFileDialog, QLabel
+
 from database import connection
 from ui_main import Ui_MainWindow
 from qt_material import apply_stylesheet
-from get import get_product_id, get_category_id, get_parent_category_id, get_category_for_product, get_image_for_product
+from get import get_product_id, get_category_id, get_parent_category_id, get_image_for_product
 
 directory = os.path.abspath(os.curdir)
 russian_validator = QRegExpValidator(QRegExp('[А-Яа-яЁё ]+'))
@@ -83,6 +84,7 @@ class MainWindow(QMainWindow):
         self.filter_product()
         self.get_data_main_product()
         self.get_categories_parent_category()
+        self.get_categories_parent_category_2()
         self.get_data_product()
         self.get_data_categories()
         self.get_categories()
@@ -312,7 +314,7 @@ class MainWindow(QMainWindow):
                     delete_button = QPushButton(self)
                     delete_button.setFixedSize(60, 60)
                     delete_button.setIcon(QIcon(QPixmap(directory + f'/icon/delete.png').scaled(QSize(60, 60))))
-                    # delete_button.clicked.connect(lambda _, i=index - 1: self.delete_categories(i))
+                    delete_button.clicked.connect(lambda _, i=index - 1: self.delete_product(i))
                     self.ui.tableProduct.setIndexWidget(self.model_table_main_product.index(index - 1, 7),
                                                         delete_button)
                     self.ui.tableProduct.verticalHeader().setDefaultSectionSize(65)
@@ -364,6 +366,15 @@ class MainWindow(QMainWindow):
         try:
             with connection.cursor() as cursor:
                 name_product = self.ui.lineEditNameProduct.text()
+                combo_box_product = self.ui.comboBoxCategoriesProduct.currentText()
+                description_product = self.ui.textEditDescriptionProduct.toPlainText()
+                amount_product = self.ui.lineEditAmountProduct.text()
+                price_product = self.ui.lineEditPriceProduct.text()
+
+                if name_product == '' or self.image_file is None or not self.image_file or description_product == '' \
+                        or amount_product == '' or price_product == '':
+                    show_error_message('Вы не ввели значения!')
+                    return
 
                 with open(self.image_file, 'rb') as f:
                     image_data = f.read()
@@ -374,16 +385,6 @@ class MainWindow(QMainWindow):
                     RETURNING id_image;
                     ''', (psycopg2.Binary(image_data),))
                 id_image = cursor.fetchone()[0]
-
-                combo_box_product = self.ui.comboBoxCategoriesProduct.currentText()
-                description_product = self.ui.textEditDescriptionProduct.toPlainText()
-                amount_product = self.ui.lineEditAmountProduct.text()
-                price_product = self.ui.lineEditPriceProduct.text()
-
-                if name_product == '' or self.image_file is None or description_product == '' \
-                        or amount_product == '' or price_product == '':
-                    show_error_message('Вы не ввели значения!')
-                    return
 
                 category_name, parent_category_name = combo_box_product.split(' - ')
 
@@ -406,7 +407,6 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             print(f'Ошибка: {e}')
-            show_error_message('Ошибка при добавлении товара!')
 
         finally:
             self.ui.lineEditNameProduct.clear()
@@ -490,6 +490,43 @@ class MainWindow(QMainWindow):
             self.get_data_main_product()
             self.ui.Widget_pages.setCurrentWidget(self.ui.pageProduct)
 
+    def delete_product(self, row):
+        try:
+            with connection.cursor() as cursor:
+                product_name = self.model_table_main_product.item(row, 0).text()
+                product_id = get_product_id(product_name)
+
+                cursor.execute('''
+                    SELECT id_image
+                    FROM product
+                    WHERE id_product = %s;
+                ''', (product_id,))
+
+                image_id = cursor.fetchone()[0]
+
+                cursor.execute('''
+                    DELETE FROM product
+                    WHERE id_product = %s;
+                ''', (product_id,))
+
+                cursor.execute('''
+                    DELETE FROM image
+                    WHERE id_image = %s;
+                ''', (image_id,))
+
+            connection.commit()
+
+        except Exception as e:
+            print(f'Ошибка: {e}')
+            connection.rollback()
+
+        finally:
+            self.filter_product()
+            self.get_data_product()
+            self.get_categories()
+            self.get_data_main_product()
+            self.ui.Widget_pages.setCurrentWidget(self.ui.pageProduct)
+
     def edit_product(self, row):
         try:
             self.ui.Widget_pages.setCurrentWidget(self.ui.pageEditProduct)
@@ -497,6 +534,8 @@ class MainWindow(QMainWindow):
             description_product = self.model_table_main_product.item(row, 3).text()
             amount_product = self.model_table_main_product.item(row, 4).text()
             price_product = self.model_table_main_product.item(row, 5).text()
+            category_product = self.model_table_main_product.item(row, 2).text()
+
             image_product = get_image_for_product(name_product)
 
             if image_product:
@@ -507,28 +546,23 @@ class MainWindow(QMainWindow):
 
             self.ui.textEditImageProduct_2.mousePressEvent = lambda event: self.open_image_dialog_2(event)
 
-            category_product = get_category_for_product(name_product)
-
             self.ui.lineEditNameProduct_2.setText(name_product)
             self.ui.textEditDescriptionProduct_2.setPlainText(description_product)
             self.ui.lineEditAmountProduct_2.setText(amount_product)
             self.ui.lineEditPriceProduct_2.setText(price_product.replace('$', ''))
-            self.get_categories_parent_category_2()
+            self.ui.comboBoxCategoriesProduct_2.setCurrentText(category_product)
 
             if image_product is None:
                 self.ui.textEditImageProduct_2.clear()
-            if category_product:
-                index = self.ui.comboBoxCategoriesProduct_2.findText(category_product)
-                if index != -1:
-                    self.ui.comboBoxCategoriesProduct_2.setCurrentIndex(index)
+
         except Exception as e:
             print(f'Ошибка: {e}')
 
     def get_categories_parent_category_2(self):
         with connection.cursor() as cursor:
             cursor.execute('''
-                SELECT C.name_categories, PC.name 
-                FROM categories_parent_category CPC 
+                SELECT C.name_categories, PC.name
+                FROM categories_parent_category CPC
                 JOIN categories C ON CPC.id_categories = C.id_categories
                 JOIN parent_category PC ON CPC.id_parent_categories = PC.id_parent_category
             ''')
@@ -651,8 +685,8 @@ class MainWindow(QMainWindow):
                     return
 
                 cursor.execute('''
-                INSERT INTO categories_parent_category (id_categories, id_parent_categories) 
-                VALUES (%s, %s);
+                    INSERT INTO categories_parent_category (id_categories, id_parent_categories) 
+                    VALUES (%s, %s);
                 ''', (id_categories, id_parent_category))
                 connection.commit()
 
@@ -689,11 +723,17 @@ class MainWindow(QMainWindow):
 
             with connection.cursor() as cursor:
                 if new_categories_name:
-                    cursor.execute('UPDATE categories SET name_categories = %s WHERE id_categories = %s;',
-                                   (new_categories_name, self.current_edit_categories_id))
+                    cursor.execute('''
+                        UPDATE categories 
+                        SET name_categories = %s 
+                        WHERE id_categories = %s;
+                    ''', (new_categories_name, self.current_edit_categories_id))
                 if new_parent_categories_name:
-                    cursor.execute('UPDATE parent_category SET name = %s WHERE id_parent_category = %s;',
-                                   (new_parent_categories_name, self.current_edit_parent_categories_id))
+                    cursor.execute('''
+                        UPDATE parent_category 
+                        SET name = %s 
+                        WHERE id_parent_category = %s;
+                    ''', (new_parent_categories_name, self.current_edit_parent_categories_id))
                 connection.commit()
 
         except Exception as e:
