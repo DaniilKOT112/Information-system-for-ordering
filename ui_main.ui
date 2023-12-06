@@ -85,16 +85,16 @@
            <widget class="QLabel" name="label">
             <property name="font">
              <font>
-              <family>Montserrat</family>
-              <pointsize>13</pointsize>
-              <weight>75</weight>
+              <family>Segoe UI Variable Small Semibol</family>
+              <pointsize>11</pointsize>
+              <weight>7</weight>
               <italic>false</italic>
-              <bold>true</bold>
+              <bold>false</bold>
              </font>
             </property>
             <property name="styleSheet">
-             <string notr="true">font: 75 13pt &quot;Montserrat&quot;;
-font: bold;</string>
+             <string notr="true">font: 63 11pt &quot;Segoe UI Variable Small Semibol&quot;;
+</string>
             </property>
             <property name="text">
              <string>Информационная система для оформления заказа в Зоомагазине</string>
@@ -500,7 +500,7 @@ font: bold;</string>
             <item>
              <widget class="QStackedWidget" name="Widget_pages">
               <property name="currentIndex">
-               <number>5</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="pageCatalog">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -624,7 +624,7 @@ font: bold;</string>
                            <bool>false</bool>
                           </property>
                           <property name="styleSheet">
-                           <string notr="true"/>
+                           <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                           </property>
                          </widget>
                         </item>
@@ -643,7 +643,7 @@ font: bold;</string>
                            </size>
                           </property>
                           <property name="styleSheet">
-                           <string notr="true"/>
+                           <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                           </property>
                           <property name="text">
                            <string>фильтры</string>
@@ -659,7 +659,7 @@ font: bold;</string>
                            </size>
                           </property>
                           <property name="styleSheet">
-                           <string notr="true"/>
+                           <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                           </property>
                           <property name="text">
                            <string>поиск</string>
@@ -675,27 +675,34 @@ font: bold;</string>
                            </size>
                           </property>
                           <property name="styleSheet">
-                           <string notr="true"/>
+                           <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                           </property>
                          </widget>
                         </item>
                        </layout>
                       </widget>
                      </item>
-                     <item row="1" column="1">
-                      <widget class="QTableWidget" name="tableCatalogOrder">
-                       <property name="styleSheet">
-                        <string notr="true">font: 75 10pt &quot;Montserrat&quot;;
-font: bold;</string>
-                       </property>
-                      </widget>
-                     </item>
                      <item row="1" column="0">
                       <widget class="QTableView" name="tableProductOrder">
                        <property name="styleSheet">
-                        <string notr="true">font: 75 10pt &quot;Montserrat&quot;;
-font: bold;</string>
+                        <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                        </property>
+                       <attribute name="verticalHeaderDefaultSectionSize">
+                        <number>150</number>
+                       </attribute>
+                       <attribute name="verticalHeaderMinimumSectionSize">
+                        <number>60</number>
+                       </attribute>
+                      </widget>
+                     </item>
+                     <item row="1" column="1">
+                      <widget class="QTableView" name="tableCatalogOrder">
+                       <property name="styleSheet">
+                        <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
+                       </property>
+                       <attribute name="horizontalHeaderMinimumSectionSize">
+                        <number>41</number>
+                       </attribute>
                        <attribute name="verticalHeaderDefaultSectionSize">
                         <number>150</number>
                        </attribute>
@@ -745,7 +752,7 @@ font: bold;</string>
                         </size>
                        </property>
                        <property name="styleSheet">
-                        <string notr="true"/>
+                        <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                        </property>
                        <property name="text">
                         <string>оформить</string>
@@ -1266,8 +1273,7 @@ font: bold;</string>
                        <item>
                         <widget class="QLabel" name="label_3">
                          <property name="styleSheet">
-                          <string notr="true">font: 75 11pt &quot;Montserrat&quot;;
-font: bold;</string>
+                          <string notr="true">font: 63 11pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>Список товаров</string>
@@ -1296,7 +1302,7 @@ font: bold;</string>
                           </size>
                          </property>
                          <property name="styleSheet">
-                          <string notr="true"/>
+                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>+</string>
@@ -1308,8 +1314,7 @@ font: bold;</string>
                      <item row="1" column="0">
                       <widget class="QTableView" name="tableProduct">
                        <property name="styleSheet">
-                        <string notr="true">font: 75 10pt &quot;Montserrat&quot;;
-font: bold;</string>
+                        <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                        </property>
                        <attribute name="horizontalHeaderStretchLastSection">
                         <bool>false</bool>
@@ -1970,8 +1975,7 @@ font: bold;</string>
                        <item>
                         <widget class="QLabel" name="label_2">
                          <property name="styleSheet">
-                          <string notr="true">font: 75 11pt &quot;Montserrat&quot;;
-font: bold;</string>
+                          <string notr="true">font: 63 11pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>Список категорий</string>
@@ -2000,7 +2004,7 @@ font: bold;</string>
                           </size>
                          </property>
                          <property name="styleSheet">
-                          <string notr="true"/>
+                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>+</string>
@@ -2012,8 +2016,7 @@ font: bold;</string>
                      <item row="3" column="0">
                       <widget class="QTableView" name="tableAddCategories">
                        <property name="styleSheet">
-                        <string notr="true">font: 75 10pt &quot;Montserrat&quot;;
-font: bold;</string>
+                        <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                        </property>
                        <property name="selectionMode">
                         <enum>QAbstractItemView::ExtendedSelection</enum>

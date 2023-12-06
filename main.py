@@ -62,6 +62,7 @@ class MainWindow(QMainWindow):
         self.ui.cancelEditCategories.clicked.connect(
             partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCategories))
         self.ui.cancelEditProduct.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageProduct))
+        self.ui.tableProductOrder.doubleClicked.connect(self.double_click)
 
         self.ui.applyEditProduct.clicked.connect(self.update_product)
         self.ui.search.clicked.connect(self.search_product)
@@ -80,6 +81,8 @@ class MainWindow(QMainWindow):
         self.ui.tableProductOrder.setModel(self.model_table_product)
         self.model_table_main_product = QStandardItemModel()
         self.ui.tableProduct.setModel(self.model_table_main_product)
+        self.model_table_orders = QStandardItemModel()
+        self.ui.tableCatalogOrder.setModel(self.model_table_orders)
 
         self.filter_product()
         self.get_data_main_product()
@@ -103,6 +106,52 @@ class MainWindow(QMainWindow):
         self.ui.lineEditAmountProduct_2.setValidator(integer)
         self.ui.lineEditPriceProduct.setValidator(real)
         self.ui.lineEditPriceProduct_2.setValidator(real)
+
+    def double_click(self, index):
+        selected_row = index.row()
+        self.add_product_order(selected_row)
+
+    def add_product_order(self, row):
+        try:
+            product_name = self.model_table_product.item(row, 0)
+            category_name = self.model_table_product.item(row, 2)
+            amount = self.model_table_product.item(row, 5)
+            price = self.model_table_product.item(row, 4)
+
+            self.model_table_orders.appendRow([
+                QStandardItem(product_name),
+                QStandardItem(category_name),
+                QStandardItem(''),
+                QStandardItem(amount),
+                QStandardItem(''),
+                QStandardItem(price)
+            ])
+            self.model_table_orders.setHorizontalHeaderLabels(
+                ['Наименование', 'Категория', '', 'Количество', '', 'Цена'])
+
+            index = self.model_table_orders.rowCount() - 1
+
+            for i in range(0, 6):
+                if i not in [2, 4]:
+                    self.ui.tableCatalogOrder.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
+                else:
+                    self.ui.tableCatalogOrder.horizontalHeader().setSectionResizeMode(i, QHeaderView.Fixed)
+                    self.ui.tableCatalogOrder.horizontalHeader().resizeSection(i, 65)
+
+            button_edit = QPushButton(self)
+            button_edit.setFixedSize(60, 60)
+            button_edit.setIcon(QIcon(QPixmap(directory + '/icon/plus.png').scaled(QSize(60, 60))))
+            # button_edit.clicked.connect(lambda _, r=index: self.edit_order_product(r))
+            self.ui.tableCatalogOrder.setIndexWidget(self.model_table_orders.index(index, 2), button_edit)
+
+            button_delete = QPushButton(self)
+            button_delete.setFixedSize(60, 60)
+            button_delete.setIcon(QIcon(QPixmap(directory + '/icon/minus.png').scaled(QSize(60, 60))))
+            # button_delete.clicked.connect(lambda _, r=index: self.delete_order_product(r))
+            self.ui.tableCatalogOrder.setIndexWidget(self.model_table_orders.index(index, 4), button_delete)
+
+        except Exception as e:
+            print(f'Ошибка: {e}')
 
     def open_image_dialog_2(self, event):
         if event.button() == Qt.LeftButton:
@@ -830,6 +879,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.showMaximized()
-    apply_stylesheet(app, theme='dark_yellow.xml', invert_secondary=True)
+    apply_stylesheet(app, theme='dark_blue.xml', invert_secondary=True)
     window.show()
     sys.exit(app.exec_())
