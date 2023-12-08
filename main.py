@@ -11,7 +11,8 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QPushButton,
 from database import connection
 from ui_main import Ui_MainWindow
 from qt_material import apply_stylesheet
-from get import get_product_id, get_category_id, get_parent_category_id, get_image_for_product
+from get import get_category_id, get_parent_category_id, get_image_for_product, get_product_id, get_product_price, \
+    get_product_quantity
 
 directory = os.path.abspath(os.curdir)
 russian_validator = QRegExpValidator(QRegExp('[А-Яа-яЁё ]+'))
@@ -40,6 +41,7 @@ class MainWindow(QMainWindow):
         self.header = None
         self.animation = None
         self.image_file = None
+        self.new_order_id = None
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -62,7 +64,8 @@ class MainWindow(QMainWindow):
         self.ui.cancelEditCategories.clicked.connect(
             partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageCategories))
         self.ui.cancelEditProduct.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageProduct))
-        self.ui.tableProductOrder.doubleClicked.connect(self.double_click)
+        self.ui.tableProductOrder.doubleClicked.connect(self.double_click_add)
+        self.ui.tableCatalogOrder.doubleClicked.connect(self.double_click_dell)
 
         self.ui.applyEditProduct.clicked.connect(self.update_product)
         self.ui.search.clicked.connect(self.search_product)
@@ -107,14 +110,46 @@ class MainWindow(QMainWindow):
         self.ui.lineEditPriceProduct.setValidator(real)
         self.ui.lineEditPriceProduct_2.setValidator(real)
 
-    def double_click(self, index):
+        self.ui.placeOrder.clicked.connect(self.order_button_clicked)
+
+    def double_click_add(self, index):
         selected_row = index.row()
         self.add_product_order(selected_row)
+
+    def double_click_dell(self, index):
+        selected_row = index.row()
+        self.remove_product_order(selected_row)
+
+    def remove_product_order(self, row):
+        try:
+            product_name = self.model_table_orders.item(row, 0)
+            category_name = self.model_table_orders.item(row, 1)
+
+            product_name = str(product_name.text())
+            category_name = str(category_name.text())
+
+            for row in range(self.model_table_orders.rowCount() - 1, -1, -1):
+                if str(self.model_table_orders.item(row, 0).text()) == product_name and str(self.model_table_orders.item(row, 1).text()) == category_name:
+                    self.model_table_orders.removeRow(row)
+                    break
+
+        except Exception as e:
+            print(f'Ошибка: {e}')
 
     def add_product_order(self, row):
         try:
             product_name = self.model_table_product.item(row, 0)
             category_name = self.model_table_product.item(row, 2)
+
+            product_name = str(product_name.text())
+            category_name = str(category_name.text())
+
+            for row in range(self.model_table_orders.rowCount()):
+                if str(self.model_table_orders.item(row, 0).text()) == product_name \
+                        and str(self.model_table_orders.item(row, 1).text()) == category_name:
+                    show_error_message('Товар уже имеется в заказе!')
+                    return
+
             amount = self.model_table_product.item(row, 5)
             price = self.model_table_product.item(row, 4)
 
@@ -138,17 +173,103 @@ class MainWindow(QMainWindow):
                     self.ui.tableCatalogOrder.horizontalHeader().setSectionResizeMode(i, QHeaderView.Fixed)
                     self.ui.tableCatalogOrder.horizontalHeader().resizeSection(i, 65)
 
-            button_edit = QPushButton(self)
-            button_edit.setFixedSize(60, 60)
-            button_edit.setIcon(QIcon(QPixmap(directory + '/icon/plus.png').scaled(QSize(60, 60))))
-            # button_edit.clicked.connect(lambda _, r=index: self.edit_order_product(r))
-            self.ui.tableCatalogOrder.setIndexWidget(self.model_table_orders.index(index, 2), button_edit)
+            button_plus = QPushButton(self)
+            button_plus.setFixedSize(60, 60)
+            button_plus.setIcon(QIcon(QPixmap(directory + '/icon/plus.png').scaled(QSize(60, 60))))
+            button_plus.clicked.connect(lambda _, r=index: self.update_quantity(r, 1))
+            self.ui.tableCatalogOrder.setIndexWidget(self.model_table_orders.index(index, 2), button_plus)
 
-            button_delete = QPushButton(self)
-            button_delete.setFixedSize(60, 60)
-            button_delete.setIcon(QIcon(QPixmap(directory + '/icon/minus.png').scaled(QSize(60, 60))))
-            # button_delete.clicked.connect(lambda _, r=index: self.delete_order_product(r))
-            self.ui.tableCatalogOrder.setIndexWidget(self.model_table_orders.index(index, 4), button_delete)
+            button_minus = QPushButton(self)
+            button_minus.setFixedSize(60, 60)
+            button_minus.setIcon(QIcon(QPixmap(directory + '/icon/minus.png').scaled(QSize(60, 60))))
+            button_minus.clicked.connect(lambda _, r=index: self.update_quantity(r, -1))
+            self.ui.tableCatalogOrder.setIndexWidget(self.model_table_orders.index(index, 4), button_minus)
+
+        except Exception as e:
+            print(f'Ошибка: {e}')
+
+    def order_button_clicked(self):
+        if self.model_table_orders.rowCount() == 0:
+            show_error_message('Пожалуйста добавьте продукт для оформления заказа!')
+            return
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('''
+                    INSERT INTO "order" (order_date) 
+                    VALUES (CURRENT_DATE) 
+                    RETURNING id_order;
+                    ''')
+                new_order_id = cursor.fetchone()[0]
+                for row in range(self.model_table_orders.rowCount()):
+                    product_name = self.model_table_orders.item(row, 0).text()
+                    amount = int(self.model_table_orders.item(row, 3).text())
+                    price = self.model_table_orders.item(row, 5).text()
+                    product_id = get_product_id(product_name)
+                    current_quantity = get_product_quantity(product_id)
+
+                    new_quantity = current_quantity - amount
+                    cursor.execute('''
+                        UPDATE product 
+                        SET amount = %s 
+                        WHERE id_product = %s;
+                    ''', (new_quantity, product_id))
+
+                    cursor.execute('''
+                        SELECT id_product
+                        FROM order_details
+                        WHERE id_order = %s AND id_product = %s;
+                    ''', (new_order_id, product_id))
+
+                    existing_entry = cursor.fetchone()
+
+                    if not existing_entry:
+                        cursor.execute('''
+                            INSERT INTO order_details (id_order, id_product, amount, price)
+                            VALUES (%s, %s, %s, %s);
+                        ''', (new_order_id, product_id, amount, price))
+
+                connection.commit()
+
+                self.model_table_orders.clear()
+                self.model_table_orders.setColumnCount(6)
+                self.model_table_orders.setHorizontalHeaderLabels(
+                    ['Наименование', 'Категория', '', 'Количество', '', 'Цена'])
+
+                for i in range(0, 6):
+                    if i not in [2, 4]:
+                        self.ui.tableCatalogOrder.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
+                    else:
+                        self.ui.tableCatalogOrder.horizontalHeader().setSectionResizeMode(i, QHeaderView.Fixed)
+                        self.ui.tableCatalogOrder.horizontalHeader().resizeSection(i, 65)
+
+                self.get_data_product()
+                self.get_data_main_product()
+
+        except Exception as e:
+            print(f'Ошибка: {e}')
+
+    def update_quantity(self, row, delta):
+        try:
+            amount_item = self.model_table_orders.item(row, 3)
+            current_amount_text = amount_item.text()
+            current_amount = int(current_amount_text) if current_amount_text else 0
+            product_name = self.model_table_orders.item(row, 0).text()
+            product_id = get_product_id(product_name)
+            available_quantity = get_product_quantity(product_id)
+            unit_price_text = get_product_price(product_id)
+            unit_price = float(unit_price_text.replace('$', '')) if unit_price_text else 0.0
+
+            new_amount = max(current_amount + delta, 0)
+
+            if new_amount > available_quantity:
+                show_error_message('На складе недостаточно товара для совершения заказа, пожалуйста попробуйте позже')
+                return
+
+            amount_item.setText(str(new_amount))
+            total_price = new_amount * unit_price
+            total_price_item = self.model_table_orders.item(row, 5)
+            total_price_item.setText('${:.2f}'.format(total_price))
 
         except Exception as e:
             print(f'Ошибка: {e}')
@@ -450,8 +571,8 @@ class MainWindow(QMainWindow):
                 cursor.execute('''
                     INSERT INTO product (name, id_image, id_category, description, amount, price)
                     VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_product;
-                    ''', (name_product, id_image, id_categories_parent_category, description_product, amount_product,
-                          price_product))
+                ''', (name_product, id_image, id_categories_parent_category, description_product, amount_product,
+                      price_product))
             connection.commit()
 
         except Exception as e:
