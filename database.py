@@ -67,6 +67,33 @@ CREATE TABLE IF NOT EXISTS public.image
     url bytea,
     CONSTRAINT image_pkey PRIMARY KEY (id_image)
 );
+
+CREATE TABLE IF NOT EXISTS public."order"
+(
+    id_order integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    order_date date NOT NULL,
+    CONSTRAINT order_pkey PRIMARY KEY (id_order)
+);
+
+CREATE TABLE IF NOT EXISTS public.order_details
+(
+    id_product_order integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    id_product integer NOT NULL,
+    id_order integer NOT NULL,
+    amount integer NOT NULL,
+    price money NOT NULL,
+    CONSTRAINT product_order_pkey PRIMARY KEY (id_product_order),
+    CONSTRAINT "order" FOREIGN KEY (id_order)
+        REFERENCES public."order" (id_order) MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID,
+    CONSTRAINT product FOREIGN KEY (id_product)
+        REFERENCES public.product (id_product) MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID
+);
     """
 
 connection = psycopg2.connect(**db)
