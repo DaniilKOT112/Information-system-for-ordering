@@ -91,3 +91,17 @@ def get_category_for_product(product_name):
     except Exception as e:
         print(f'Ошибка: {e}')
         return None
+
+
+def get_product_price(product_id):
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT price FROM product WHERE id_product = %s;', (product_id,))
+        price = cursor.fetchone()[0]
+    return price
+
+
+def get_product_quantity(product_id):
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT amount FROM product WHERE id_product = %s;', (product_id,))
+        quantity = cursor.fetchone()[0]
+    return quantity
