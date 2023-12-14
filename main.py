@@ -176,27 +176,54 @@ class MainWindow(QMainWindow):
 
         self.rows = []
 
+    def delete_order(self):
+        try:
+            with connection.cursor() as cursor:
+                selected_row = self.ui.listOrder.currentIndex().row()
+                order_item = self.model_table_main_orders.item(selected_row, 0)
+
+                if order_item and order_item.text() is not None:
+                    order_item_text = order_item.text()
+
+                cursor.execute('''
+                    DELETE FROM "order" 
+                    WHERE id_order = %s;
+                ''', (order_item_text,))
+
+                connection.commit()
+        except Exception as e:
+            print(f'Ошибка: {e}')
+            show_error_message('Ошибка при удалении записи.')
+
+        finally:
+            self.get_data_orders()
+
     def update_order(self):
         try:
             selected_row = self.ui.listOrder.currentIndex().row()
-            order_item = self.model_table_main_orders.item(selected_row, 0).text()
+            order_item = self.model_table_main_orders.item(selected_row, 0)
 
-            for row_index in self.rows:
-                product_name = self.model_table_edit_order.item(row_index, 0).text()
-                id_product = get_product_id(product_name)
-                new_amount = int(self.model_table_edit_order.item(row_index, 3).text())
-                price = self.model_table_edit_order.item(row_index, 5).text().replace('$', '').replace(',',
-                                                                                                       '').strip()
-                new_price = float(price) if price else 0.0
+            if order_item and order_item.text() is not None:
+                order_item_text = order_item.text()
 
-                with connection.cursor() as cursor:
-                    cursor.execute('''
-                        UPDATE public.order_details
-                        SET amount = %s, price = %s
-                        WHERE id_order = %s AND id_product = %s
-                    ''', (new_amount, new_price, order_item, id_product))
+                for row_index in self.rows:
+                    product_name_item = self.model_table_edit_order.item(row_index, 0)
+                    id_product = get_product_id(product_name_item.text()) if product_name_item else None
 
-                    connection.commit()
+                    if product_name_item and product_name_item.text() is not None:
+                        new_amount = int(self.model_table_edit_order.item(row_index, 3).text())
+                        price_text = self.model_table_edit_order.item(row_index, 5).text().replace('$', '').replace(',',
+                                                                                                                    '').strip()
+                        price = float(price_text) if price_text else 0.0
+
+                        with connection.cursor() as cursor:
+                            cursor.execute('''
+                                UPDATE public.order_details
+                                SET amount = %s, price = %s
+                                WHERE id_order = %s AND id_product = %s
+                            ''', (new_amount, price, order_item_text, id_product))
+
+                            connection.commit()
                 self.ui.Widget_pages.setCurrentWidget(self.ui.pageOrderList)
 
         except Exception as e:
@@ -205,73 +232,79 @@ class MainWindow(QMainWindow):
     def edit_product_order(self):
         self.ui.Widget_pages.setCurrentWidget(self.ui.pageEditOrder)
         selected_row = self.ui.listOrder.currentIndex().row()
-        order_item = self.model_table_main_orders.item(selected_row, 0).text()
+        order_item = self.model_table_main_orders.item(selected_row, 0)
 
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute('''
-                    SELECT P.name, C.name_categories, OD.amount, OD.price
-                    FROM order_details OD
-                    INNER JOIN product P ON OD.id_product = P.id_product
-                    INNER JOIN categories_parent_category CPC ON P.id_category = CPC.id_categories_parent_category
-                    JOIN categories C ON CPC.id_categories = C.id_categories
-                    WHERE OD.id_order = %s
-                ''', (order_item,))
+        if order_item and order_item.text() is not None:
+            order_item_text = order_item.text()
 
-                order_details_data = cursor.fetchall()
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute('''
+                        SELECT P.name, C.name_categories, OD.amount, OD.price
+                        FROM order_details OD
+                        INNER JOIN product P ON OD.id_product = P.id_product
+                        INNER JOIN categories_parent_category CPC ON P.id_category = CPC.id_categories_parent_category
+                        JOIN categories C ON CPC.id_categories = C.id_categories
+                        WHERE OD.id_order = %s
+                    ''', (order_item_text,))
 
-                self.model_table_edit_order.clear()
-                self.ui.editOrder.setModel(self.model_table_edit_order)
-                self.model_table_edit_order.setColumnCount(6)
-                self.model_table_edit_order.setHorizontalHeaderLabels(
-                    ['Наименование', 'Категория', '', 'Количество', '', 'Цена'])
+                    order_details_data = cursor.fetchall()
 
-                for row, details in enumerate(order_details_data, start=1):
-                    self.model_table_edit_order.appendRow([
-                        QStandardItem(str(details[0])),
-                        QStandardItem(str(details[1])),
-                        QStandardItem(''),
-                        QStandardItem(str(details[2])),
-                        QStandardItem(''),
-                        QStandardItem(str(details[3]))
-                    ])
+                    self.model_table_edit_order.clear()
+                    self.ui.editOrder.setModel(self.model_table_edit_order)
+                    self.model_table_edit_order.setColumnCount(6)
+                    self.model_table_edit_order.setHorizontalHeaderLabels(
+                        ['Наименование', 'Категория', '', 'Количество', '', 'Цена'])
 
-                    index = self.model_table_edit_order.rowCount() - 1
+                    for row, details in enumerate(order_details_data, start=1):
+                        self.model_table_edit_order.appendRow([
+                            QStandardItem(str(details[0])),
+                            QStandardItem(str(details[1])),
+                            QStandardItem(''),
+                            QStandardItem(str(details[2])),
+                            QStandardItem(''),
+                            QStandardItem(str(details[3]))
+                        ])
 
-                    for i in range(0, 6):
-                        if i not in [2, 4]:
-                            self.ui.editOrder.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
-                        else:
-                            self.ui.editOrder.horizontalHeader().setSectionResizeMode(i, QHeaderView.Fixed)
-                            self.ui.editOrder.horizontalHeader().resizeSection(i, 65)
+                        index = self.model_table_edit_order.rowCount() - 1
 
-                    button_plus = QPushButton(self)
-                    button_plus.setFixedSize(60, 60)
-                    button_plus.setIcon(QIcon(QPixmap(directory + '/icon/plus.png').scaled(QSize(60, 60))))
-                    button_plus.clicked.connect(lambda _, r=index: update_quantity(r, 1, self.model_table_edit_order))
-                    self.ui.editOrder.setIndexWidget(self.model_table_edit_order.index(index, 2), button_plus)
+                        for i in range(0, 6):
+                            if i not in [2, 4]:
+                                self.ui.editOrder.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
+                            else:
+                                self.ui.editOrder.horizontalHeader().setSectionResizeMode(i, QHeaderView.Fixed)
+                                self.ui.editOrder.horizontalHeader().resizeSection(i, 65)
 
-                    button_minus = QPushButton(self)
-                    button_minus.setFixedSize(60, 60)
-                    button_minus.setIcon(QIcon(QPixmap(directory + '/icon/minus.png').scaled(QSize(60, 60))))
-                    button_minus.clicked.connect(lambda _, r=index: update_quantity(r, -1, self.model_table_edit_order))
-                    self.ui.editOrder.setIndexWidget(self.model_table_edit_order.index(index, 4), button_minus)
-                    self.ui.editOrder.verticalHeader().setDefaultSectionSize(65)
+                        button_plus = QPushButton(self)
+                        button_plus.setFixedSize(60, 60)
+                        button_plus.setIcon(QIcon(QPixmap(directory + '/icon/plus.png').scaled(QSize(60, 60))))
+                        button_plus.clicked.connect(
+                            lambda _, r=index: update_quantity(r, 1, self.model_table_edit_order))
+                        self.ui.editOrder.setIndexWidget(self.model_table_edit_order.index(index, 2), button_plus)
 
-                    self.rows.append(index)
+                        button_minus = QPushButton(self)
+                        button_minus.setFixedSize(60, 60)
+                        button_minus.setIcon(QIcon(QPixmap(directory + '/icon/minus.png').scaled(QSize(60, 60))))
+                        button_minus.clicked.connect(
+                            lambda _, r=index: update_quantity(r, -1, self.model_table_edit_order))
+                        self.ui.editOrder.setIndexWidget(self.model_table_edit_order.index(index, 4), button_minus)
+                        self.ui.editOrder.verticalHeader().setDefaultSectionSize(65)
 
-        except Exception as e:
-            print(f'Ошибка: {e}')
+                        self.rows.append(index)
+
+            except Exception as e:
+                print(f'Ошибка: {e}')
 
     def get_data_orders(self):
         try:
             with connection.cursor() as cursor:
                 cursor.execute('''
-                    SELECT id_order, order_date
+                    SELECT O.id_order, O.order_date
                     FROM "order" O
                     ORDER BY O.id_order;
                 ''')
                 records = cursor.fetchall()
+                del_records = []
 
                 self.model_table_main_orders.clear()
                 self.model_table_main_orders.setColumnCount(4)
@@ -286,7 +319,27 @@ class MainWindow(QMainWindow):
                     self.horizontal_header.setSectionResizeMode(i, QHeaderView.Fixed)
                     self.horizontal_header.resizeSection(i, 65)
 
-                for index, record in enumerate(records, start=1):
+                for record in records:
+                    id_order = record[0]
+
+                    cursor.execute('''
+                        SELECT COUNT(*) 
+                        FROM order_details 
+                        WHERE id_order = %s
+                    ''', (id_order,))
+
+                    order = cursor.fetchone()[0] > 0
+
+                    if not order:
+                        cursor.execute('''
+                            DELETE FROM "order" 
+                            WHERE id_order = %s
+                        ''', (id_order,))
+                        connection.commit()
+                    else:
+                        del_records.append(record)
+
+                for index, record in enumerate(del_records, start=1):
                     self.model_table_main_orders.appendRow([])
                     for col, value in enumerate(record):
                         item = QStandardItem(str(value))
@@ -302,7 +355,7 @@ class MainWindow(QMainWindow):
                     delete_button = QPushButton(self)
                     delete_button.setFixedSize(60, 60)
                     delete_button.setIcon(QIcon(QPixmap(directory + f'/icon/delete.png').scaled(QSize(60, 60))))
-                    # delete_button.clicked.connect(lambda _, i=index - 1: self.delete_categories(i))
+                    delete_button.clicked.connect(lambda _, i=index - 1: self.delete_order())
                     self.ui.listOrder.setIndexWidget(self.model_table_main_orders.index(index - 1, 3),
                                                      delete_button)
                 self.ui.listOrder.verticalHeader().setDefaultSectionSize(65)
@@ -725,6 +778,17 @@ class MainWindow(QMainWindow):
                     show_error_message('Вы не ввели значения!')
                     return
 
+                cursor.execute('''
+                               SELECT id_product 
+                               FROM product 
+                               WHERE name = %s;
+                           ''', (name_product,))
+                existing_product = cursor.fetchone()
+
+                if existing_product:
+                    show_error_message('Продукт с таким именем уже существует!')
+                    return
+
                 with open(self.image_file, 'rb') as f:
                     image_data = f.read()
 
@@ -873,6 +937,7 @@ class MainWindow(QMainWindow):
             self.get_categories()
             self.get_data_main_product()
             self.ui.Widget_pages.setCurrentWidget(self.ui.pageProduct)
+            self.get_data_orders()
 
     def edit_product(self, row):
         try:
