@@ -236,7 +236,7 @@
                </property>
                <property name="icon">
                 <iconset>
-                 <normaloff>G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/catalog.png</normaloff>G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/catalog.png</iconset>
+                 <normaloff>icon/catalog.png</normaloff>icon/catalog.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -298,7 +298,7 @@
                </property>
                <property name="icon">
                 <iconset>
-                 <normaloff>G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/categories.png</normaloff>G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/categories.png</iconset>
+                 <normaloff>icon/categories.png</normaloff>icon/categories.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -345,7 +345,7 @@
                </property>
                <property name="icon">
                 <iconset>
-                 <normaloff>G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/product.png</normaloff>G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/product.png</iconset>
+                 <normaloff>icon/product.png</normaloff>icon/product.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -392,7 +392,7 @@
                </property>
                <property name="icon">
                 <iconset>
-                 <normaloff>G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/orders.png</normaloff>G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/orders.png</iconset>
+                 <normaloff>icon/orders.png</normaloff>icon/orders.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -439,7 +439,7 @@
                </property>
                <property name="icon">
                 <iconset>
-                 <normaloff>G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/reports.png</normaloff>G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/reports.png</iconset>
+                 <normaloff>icon/reports.png</normaloff>icon/reports.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -500,7 +500,7 @@
             <item>
              <widget class="QStackedWidget" name="Widget_pages">
               <property name="currentIndex">
-               <number>7</number>
+               <number>9</number>
               </property>
               <widget class="QWidget" name="pageCatalog">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
