@@ -54,7 +54,6 @@ def get_product_id(product_name):
         print(f'Error: {e}')
         return None
 
-
 def get_image_for_product(name_product):
     try:
         with connection.cursor() as cursor:
@@ -103,5 +102,21 @@ def get_product_price(product_id):
 def get_product_quantity(product_id):
     with connection.cursor() as cursor:
         cursor.execute('SELECT amount FROM product WHERE id_product = %s;', (product_id,))
+        quantity = cursor.fetchone()[0]
+    return quantity
+
+
+def get_order_price(order_id):
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT price FROM order_details WHERE id_order = %s',
+                       (order_id,))
+        price = cursor.fetchone()[0]
+    return price
+
+
+def get_order_quantity(order_id, product_id):
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT amount FROM order_details WHERE id_order = %s AND id_product = %s',
+                       (order_id, product_id,))
         quantity = cursor.fetchone()[0]
     return quantity
