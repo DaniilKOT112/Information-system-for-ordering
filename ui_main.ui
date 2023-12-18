@@ -500,7 +500,7 @@
             <item>
              <widget class="QStackedWidget" name="Widget_pages">
               <property name="currentIndex">
-               <number>9</number>
+               <number>8</number>
               </property>
               <widget class="QWidget" name="pageCatalog">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -2297,7 +2297,11 @@ font: bold;</string>
                       </layout>
                      </item>
                      <item row="1" column="0">
-                      <widget class="QListView" name="listOrders_2"/>
+                      <widget class="QListView" name="listOrders_2">
+                       <property name="styleSheet">
+                        <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
+                       </property>
+                      </widget>
                      </item>
                     </layout>
                    </item>

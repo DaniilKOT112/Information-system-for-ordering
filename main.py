@@ -4,16 +4,16 @@ import os
 import sys
 
 from functools import partial
-from PyQt5.QtCore import QPropertyAnimation, QSize, QRegExp, Qt, QUrl
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QRegExpValidator, QTextDocument
-from PyQt5.QtPrintSupport import QPrinter
+from PyQt5.QtCore import QPropertyAnimation, QSize, QRegExp, Qt, QUrl, QStringListModel
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QRegExpValidator, QTextDocument, QPainter
+from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QPushButton, QHeaderView, QFileDialog, QLabel
 
 from database import connection
 from ui_main import Ui_MainWindow
 from qt_material import apply_stylesheet
 from get import get_category_id, get_parent_category_id, get_image_for_product, get_product_id, get_product_price, \
-    get_product_quantity, get_order_quantity
+    get_product_quantity, get_order_quantity, get_order_details
 
 directory = os.path.abspath(os.curdir)
 russian_validator = QRegExpValidator(QRegExp('[А-Яа-яЁё ]+'))
@@ -158,6 +158,8 @@ class MainWindow(QMainWindow):
         self.ui.listOrder.setModel(self.model_table_main_orders)
         self.model_table_edit_order = QStandardItemModel()
         self.ui.editOrder.setModel(self.model_table_edit_order)
+        self.order_details_model = QStringListModel()
+        self.ui.listOrders_2.setModel(self.order_details_model)
 
         self.filter_product()
         self.get_data_main_product()
@@ -184,10 +186,63 @@ class MainWindow(QMainWindow):
         self.ui.lineEditPriceProduct_2.setValidator(real)
 
         self.ui.placeOrder.clicked.connect(self.order_button_clicked)
+        self.ui.listOrder.doubleClicked.connect(self.double_click_add_list)
         self.ui.applyEditOrder.clicked.connect(self.edit_order)
+        self.ui.printInfoOrder.clicked.connect(self.print_listOrders)
+        self.ui.cancelInfoOrder.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageOrderList))
 
         self.rows = []
         self.updates = []
+        self.order_lines = []
+
+    def print_listOrders(self):
+        try:
+            printer = QPrinter()
+            dialog = QPrintDialog(printer)
+
+            if dialog.exec_() == QPrintDialog.Accepted:
+                painter = QPainter(printer)
+                item_texts = self.order_details_model.stringList()
+                indent = 10
+                for item_text in item_texts:
+                    lines = item_text.split('\n')
+                    for i, line in enumerate(lines):
+                        painter.drawText(10, indent + i * 20, line)
+                    indent += len(lines) * 20
+                painter.end()
+
+        except Exception as e:
+            print(f'Ошибка: {e}')
+
+    def double_click_add_list(self):
+        self.ui.Widget_pages.setCurrentWidget(self.ui.pageInfoAboutOrder)
+        selected_row = self.ui.listOrder.currentIndex().row()
+        order_item = self.model_table_main_orders.item(selected_row, 0)
+
+        if order_item and order_item.text() is not None:
+            order_item_text = order_item.text()
+            order_details_data = get_order_details(order_item_text)
+            self.order_details_listview(order_details_data)
+
+    def order_details_listview(self, order_details_data):
+        try:
+            self.order_lines.clear()
+            selected_row = self.ui.listOrder.currentIndex().row()
+            order_item = self.model_table_main_orders.item(selected_row, 0)
+
+            if order_item and order_item.text() is not None:
+                order_item_text = order_item.text()
+                self.order_lines.append(f'Заказ: {order_item_text}')
+                total_sum = 0
+                for record in order_details_data:
+                    self.order_lines.append(
+                        f' Наименование: {record[0]}\n Категория: {record[1]}\n Количество: {record[3]}\n Цена: {record[4]}\'')
+                    total_sum += record[3] * float(record[4].replace('$', ''))
+                self.order_lines.append(f' Итоговая цена заказа: {total_sum:.2f}')
+                self.order_details_model.setStringList(self.order_lines)
+
+        except Exception as e:
+            print(f'Ошибка: {e}')
 
     def update_quantity_2(self, row, delta, model):
         selected_row = self.ui.listOrder.currentIndex().row()
@@ -239,48 +294,6 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 print(f'Ошибка: {e}')
 
-    # def edit_order(self):
-    #     selected_row = self.ui.listOrder.currentIndex().row()
-    #     order_item = self.model_table_main_orders.item(selected_row, 0)
-    #
-    #     if order_item and order_item.text() is not None:
-    #         order_item_text = order_item.text()
-    #         try:
-    #             with connection.cursor() as cursor:
-    #                 for row_index in self.rows:
-    #                     product = self.model_table_edit_order.item(row_index, 0)
-    #                     product_name = product.text()
-    #                     product_id = get_product_id(product_name)
-    #
-    #                     if product and product.text() is not None:
-    #                         cursor.execute('''
-    #                             SELECT amount
-    #                             FROM order_details
-    #                             WHERE id_order = %s AND id_product = %s
-    #                         ''', (order_item_text, product_id))
-    #
-    #                         existing_quantity = cursor.fetchone()[0] if cursor.rowcount > 0 else 0
-    #
-    #                         new_amount = int(self.model_table_edit_order.item(row_index, 3).text())
-    #                         delta = new_amount - existing_quantity
-    #                         price_text = self.model_table_edit_order.item(row_index, 5).text()
-    #                         price = float(price_text.replace('$', '').replace(',', '').strip())
-    #
-    #                         cursor.execute('''
-    #                             UPDATE order_details
-    #                             SET amount = %s, price = %s
-    #                             WHERE id_order = %s AND id_product = %s
-    #                         ''', (new_amount, price, order_item_text, product_id))
-    #
-    #                         update_product_amount(product_id, delta)
-    #
-    #                 connection.commit()
-    #             self.ui.Widget_pages.setCurrentWidget(self.ui.pageOrderList)
-    #             self.get_data_product()
-    #
-    #         except Exception as e:
-    #             print(f'Ошибка: {e}')
-
     def edit_order(self):
         selected_row = self.ui.listOrder.currentIndex().row()
         order_item = self.model_table_main_orders.item(selected_row, 0)
@@ -291,27 +304,27 @@ class MainWindow(QMainWindow):
                 with connection.cursor() as cursor:
                     for row_index in self.rows:
                         product = self.model_table_edit_order.item(row_index, 0)
-                        product_name = product.text()
-                        product_id = get_product_id(product_name)
-
                         if product and product.text() is not None:
-                            cursor.execute('''
-                                SELECT amount
-                                FROM order_details
-                                WHERE id_order = %s AND id_product = %s
-                            ''', (order_item_text, product_id))
-
-                            existing_quantity = cursor.fetchone()[0] if cursor.rowcount > 0 else 0
+                            product_name = product.text()
+                            product_id = get_product_id(product_name)
 
                             new_amount_item = self.model_table_edit_order.item(row_index, 3)
-                            new_amount = int(
-                                new_amount_item.text()) if new_amount_item and new_amount_item.text() else 0
-
                             price_item = self.model_table_edit_order.item(row_index, 5)
-                            price_text = price_item.text() if price_item and price_item.text() else '0'
-                            price = float(price_text.replace('$', '').replace(',', '').strip())
 
                             if new_amount_item is not None and price_item is not None:
+                                cursor.execute('''
+                                    SELECT amount
+                                    FROM order_details
+                                    WHERE id_order = %s AND id_product = %s
+                                ''', (order_item_text, product_id))
+
+                                result = cursor.fetchone()
+                                existing_quantity = result[0] if result and result[0] is not None else 0
+
+                                new_amount = int(new_amount_item.text()) if new_amount_item.text() else 0
+                                price_text = price_item.text() if price_item.text() else '0'
+                                price = float(price_text.replace('$', '').replace(',', '').strip())
+
                                 cursor.execute('''
                                     UPDATE order_details
                                     SET amount = %s, price = %s
@@ -319,8 +332,6 @@ class MainWindow(QMainWindow):
                                 ''', (new_amount, price, order_item_text, product_id))
 
                                 update_product_amount(product_id, new_amount - existing_quantity)
-                            else:
-                                print(f"Skipping row {row_index} due to None values")
 
                     connection.commit()
                 self.ui.Widget_pages.setCurrentWidget(self.ui.pageOrderList)
@@ -408,11 +419,10 @@ class MainWindow(QMainWindow):
                        DELETE FROM "order" 
                        WHERE id_order = %s;
                    ''', (order_item_text,))
-
                 connection.commit()
+
         except Exception as e:
             print(f'Ошибка: {e}')
-            show_error_message('Ошибка при удалении записи.')
 
         finally:
             self.get_data_orders()
@@ -624,6 +634,7 @@ class MainWindow(QMainWindow):
                 self.get_data_orders()
 
                 generate_pdf(new_order_id, order_pdf)
+
         except Exception as e:
             print(f'Ошибка: {e}')
 
@@ -842,6 +853,7 @@ class MainWindow(QMainWindow):
                     self.ui.tableProduct.setIndexWidget(self.model_table_main_product.index(index - 1, 7),
                                                         delete_button)
                     self.ui.tableProduct.verticalHeader().setDefaultSectionSize(65)
+
         except Exception as e:
             print(f'Ошибка: {e}')
 
