@@ -54,6 +54,7 @@ def get_product_id(product_name):
         print(f'Error: {e}')
         return None
 
+
 def get_image_for_product(name_product):
     try:
         with connection.cursor() as cursor:
@@ -120,3 +121,23 @@ def get_order_quantity(order_id, product_id):
                        (order_id, product_id,))
         quantity = cursor.fetchone()[0]
     return quantity
+
+
+def get_order_details(id_order):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('''
+                SELECT P.name, C.name_categories, OD.id_order, OD.amount, OD.price
+                FROM order_details OD
+                INNER JOIN product P ON OD.id_product = P.id_product
+                INNER JOIN categories_parent_category CPC ON P.id_category = CPC.id_categories_parent_category
+                JOIN categories C ON CPC.id_categories = C.id_categories
+                WHERE OD.id_order = %s
+            ''', (id_order,))
+
+            order_details_data = cursor.fetchall()
+            return order_details_data
+
+    except Exception as e:
+        print(f'Ошибка: {e}')
+        return []
