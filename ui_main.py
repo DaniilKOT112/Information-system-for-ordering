@@ -834,6 +834,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_27.addWidget(self.cancelInfoOrder)
         self.gridLayout_9.addLayout(self.horizontalLayout_27, 2, 0, 1, 1)
         self.listOrders_2 = QtWidgets.QListView(self.frame_10)
+        self.listOrders_2.setStyleSheet("font: 63 10pt \"Segoe UI Variable Small Semibol\";")
         self.listOrders_2.setObjectName("listOrders_2")
         self.gridLayout_9.addWidget(self.listOrders_2, 1, 0, 1, 1)
         self.horizontalLayout_24.addLayout(self.gridLayout_9)
@@ -984,7 +985,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
-        self.Widget_pages.setCurrentIndex(2)
+        self.Widget_pages.setCurrentIndex(8)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
