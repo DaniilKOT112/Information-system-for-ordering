@@ -14,6 +14,8 @@ from ui_main import Ui_MainWindow
 from qt_material import apply_stylesheet
 from get import get_category_id, get_parent_category_id, get_image_for_product, get_product_id, get_product_price, \
     get_product_quantity, get_order_quantity, get_order_details
+from reports import product_quantity, generate_pdf, categories_parents, categories_count, order_count, \
+    product_quantity_date
 
 directory = os.path.abspath(os.curdir)
 russian_validator = QRegExpValidator(QRegExp('[А-Яа-яЁё ]+'))
@@ -29,34 +31,6 @@ def show_error_message(message):
     msg.setText(message)
     msg.setWindowTitle("Сообщение об ошибке")
     msg.exec_()
-
-
-def generate_pdf(order_id, order_pdf):
-    pdf_file, _ = QFileDialog.getSaveFileName(None, 'Save PDF', '', 'PDF files (*.pdf)')
-    if pdf_file:
-        try:
-            doc = QTextDocument()
-            content = f'ID заказа: {order_id}\n\nПозиции заказа:\n'
-            total_sum = 0
-            for detail in order_pdf:
-                product_name, product_id, amount, price_str = detail
-                price = float(price_str.replace('$', ''))
-                content += f'ID_товара: {product_id}\n'
-                content += f'Наименование товара: {product_name}\n'
-                content += f'Количество товара: {amount}\n'
-                content += f'Цена: ${price:.2f}\n\n'
-                total_sum += amount * price
-
-            content += f'Итоговая сумма: ${total_sum:.2f}\n'
-
-            doc.setPlainText(content)
-            printer = QPrinter(QPrinter.PrinterResolution)
-            printer.setOutputFormat(QPrinter.PdfFormat)
-            printer.setOutputFileName(pdf_file)
-            doc.print_(printer)
-
-        except Exception as e:
-            print(f'Error: {e}')
 
 
 def update_product_amount(product_id, delta):
@@ -91,6 +65,21 @@ def update_quantity(row, delta, model):
         total_price = new_amount * price
         total_price_item = model.item(row, 5)
         total_price_item.setText('${:.2f}'.format(total_price))
+
+    except Exception as e:
+        print(f'Ошибка: {e}')
+
+
+def create_pdf_report(content):
+    try:
+        pdf_file, _ = QFileDialog.getSaveFileName(None, 'Save PDF', '', 'PDF files (*.pdf)')
+        if pdf_file:
+            doc = QTextDocument()
+            doc.setPlainText(content)
+            printer = QPrinter(QPrinter.PrinterResolution)
+            printer.setOutputFormat(QPrinter.PdfFormat)
+            printer.setOutputFileName(pdf_file)
+            doc.print_(printer)
 
     except Exception as e:
         print(f'Ошибка: {e}')
@@ -191,9 +180,89 @@ class MainWindow(QMainWindow):
         self.ui.printInfoOrder.clicked.connect(self.print_listOrders)
         self.ui.cancelInfoOrder.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageOrderList))
 
+        self.ui.outputReports.clicked.connect(self.report_output)
+        self.ui.cancelReport.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageOrderList))
+
         self.rows = []
         self.updates = []
         self.order_lines = []
+        self.report = ['Всего товаров в магазине',
+                       'Вывод родительских категорий по категориям',
+                       'Вывод категорий с их количеством',
+                       'Вывод всех заказов с исходным количеством']
+
+        self.ui.comboBox.addItems(self.report)
+
+        self.report_2 = ['Вывод количества заказанного товара по дням с итоговой суммой']
+        self.ui.comboBox_2.addItems(self.report_2)
+
+    def report_output(self):
+        try:
+            report_type = self.ui.comboBox.currentText()
+            report_type_2 = self.ui.comboBox_2.currentText()
+            selected_date = self.ui.lineEdit.text()
+            if report_type == 'Всего товаров в магазине':
+                products = product_quantity()
+                content = 'Список товаров и их количество:\n'
+                total_quantity = 0
+                for product in products:
+                    content += f'ID товара: {product["id_product"]}\n'
+                    content += f'Наименование товара: {product["name"]}\n'
+                    content += f'Количество товара: {product["quantity"]}\n\n'
+                    total_quantity += product["quantity"]
+                content += f'Всего товаров в магазине: {total_quantity}\n\n'
+                create_pdf_report(content)
+
+            if report_type == 'Вывод родительских категорий по категориям':
+                content = 'Вывод родительских категорий по категориям:\n'
+                result = categories_parents()
+                current_category = None
+                for row in result:
+                    category_name, parent_name = row
+                    if current_category != category_name:
+                        content += f'\nКатегория: {category_name}\n'
+                        current_category = category_name
+                    content += f'Родительская категория: {parent_name}\n'
+                create_pdf_report(content)
+
+            if report_type == 'Вывод категорий с их количеством':
+                content = 'Вывод категорий с их количеством:\n'
+                result = categories_count()
+                total_quantity = 0
+                for row in result:
+                    category_name, category_count = row
+                    content += f'Наименование категории: {category_name}\n'
+                    total_quantity += category_count
+                content += f'Количество категорий: {total_quantity}\n'
+                create_pdf_report(content)
+
+            if report_type == 'Вывод всех заказов с исходным количеством':
+                content = 'Вывод заказов с исходным количеством:\n'
+                result = order_count()
+                total_quantity = 0
+                for row in result:
+                    id_order, order_date, record_count = row
+                    content += f'ID заказа: {id_order}\n'
+                    total_quantity += record_count
+                content += f'Количество заказов: {total_quantity}\n'
+                create_pdf_report(content)
+
+            if report_type_2 == 'Вывод количества заказанного товара по дням с итоговой суммой':
+                content = f'Количество товара по дате заказа ({selected_date}):\n'
+                result = product_quantity_date(selected_date)
+                total_quantity = 0
+                for row in result:
+                    order_date, name, amount, category, price = row
+                    content += f'Наименование товара: {name}\n'
+                    content += f'Категория товара {category}\n'
+                    content += f'Количество: {amount}\n'
+                    content += f'Цена: {price}\n'
+                    total_quantity += amount
+                content += f'Итоговое количество: {total_quantity}\n'
+                create_pdf_report(content)
+
+        except Exception as e:
+            print(f'Ошибка: {e}')
 
     def print_listOrders(self):
         try:
@@ -237,7 +306,7 @@ class MainWindow(QMainWindow):
                 for record in order_details_data:
                     self.order_lines.append(
                         f' Наименование: {record[0]}\n Категория: {record[1]}\n Количество: {record[3]}\n Цена: {record[4]}\'')
-                    total_sum += record[3] * float(record[4].replace('$', ''))
+                    total_sum += float(record[4].replace('$', ''))
                 self.order_lines.append(f' Итоговая цена заказа: {total_sum:.2f}')
                 self.order_details_model.setStringList(self.order_lines)
 
