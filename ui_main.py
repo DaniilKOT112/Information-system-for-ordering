@@ -962,16 +962,16 @@ class Ui_MainWindow(object):
         self.horizontalLayout_33.setObjectName("horizontalLayout_33")
         spacerItem21 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_33.addItem(spacerItem21)
-        self.pushButton_2 = QtWidgets.QPushButton(self.frame_12)
-        self.pushButton_2.setMinimumSize(QtCore.QSize(140, 35))
-        self.pushButton_2.setStyleSheet("font: 63 10pt \"Segoe UI Variable Small Semibol\";")
-        self.pushButton_2.setObjectName("pushButton_2")
-        self.horizontalLayout_33.addWidget(self.pushButton_2)
-        self.pushButton = QtWidgets.QPushButton(self.frame_12)
-        self.pushButton.setMinimumSize(QtCore.QSize(140, 35))
-        self.pushButton.setStyleSheet("font: 63 10pt \"Segoe UI Variable Small Semibol\";")
-        self.pushButton.setObjectName("pushButton")
-        self.horizontalLayout_33.addWidget(self.pushButton)
+        self.outputReports = QtWidgets.QPushButton(self.frame_12)
+        self.outputReports.setMinimumSize(QtCore.QSize(140, 35))
+        self.outputReports.setStyleSheet("font: 63 10pt \"Segoe UI Variable Small Semibol\";")
+        self.outputReports.setObjectName("outputReports")
+        self.horizontalLayout_33.addWidget(self.outputReports)
+        self.cancelReport = QtWidgets.QPushButton(self.frame_12)
+        self.cancelReport.setMinimumSize(QtCore.QSize(140, 35))
+        self.cancelReport.setStyleSheet("font: 63 10pt \"Segoe UI Variable Small Semibol\";")
+        self.cancelReport.setObjectName("cancelReport")
+        self.horizontalLayout_33.addWidget(self.cancelReport)
         self.gridLayout_11.addLayout(self.horizontalLayout_33, 2, 0, 1, 2)
         spacerItem22 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.gridLayout_11.addItem(spacerItem22, 1, 0, 1, 1)
@@ -985,7 +985,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
-        self.Widget_pages.setCurrentIndex(8)
+        self.Widget_pages.setCurrentIndex(10)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -1043,8 +1043,8 @@ class Ui_MainWindow(object):
         self.label_27.setText(_translate("MainWindow", "Отчет:"))
         self.label_29.setText(_translate("MainWindow", "Отчет с датой:"))
         self.label_30.setText(_translate("MainWindow", "Дата:"))
-        self.pushButton_2.setText(_translate("MainWindow", "Вывод"))
-        self.pushButton.setText(_translate("MainWindow", "Отмена"))
+        self.outputReports.setText(_translate("MainWindow", "Вывод"))
+        self.cancelReport.setText(_translate("MainWindow", "Отмена"))
 
 
 if __name__ == "__main__":

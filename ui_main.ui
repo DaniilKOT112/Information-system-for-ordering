@@ -500,7 +500,7 @@
             <item>
              <widget class="QStackedWidget" name="Widget_pages">
               <property name="currentIndex">
-               <number>8</number>
+               <number>10</number>
               </property>
               <widget class="QWidget" name="pageCatalog">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -2685,7 +2685,7 @@ font: bold;</string>
                         </spacer>
                        </item>
                        <item>
-                        <widget class="QPushButton" name="pushButton_2">
+                        <widget class="QPushButton" name="outputReports">
                          <property name="minimumSize">
                           <size>
                            <width>140</width>
@@ -2701,7 +2701,7 @@ font: bold;</string>
                         </widget>
                        </item>
                        <item>
-                        <widget class="QPushButton" name="pushButton">
+                        <widget class="QPushButton" name="cancelReport">
                          <property name="minimumSize">
                           <size>
                            <width>140</width>

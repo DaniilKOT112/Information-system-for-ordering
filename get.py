@@ -51,7 +51,7 @@ def get_product_id(product_name):
             else:
                 return None
     except Exception as e:
-        print(f'Error: {e}')
+        print(f'Ошибка: {e}')
         return None
 
 
@@ -59,10 +59,10 @@ def get_image_for_product(name_product):
     try:
         with connection.cursor() as cursor:
             cursor.execute('''
-                SELECT i.url
-                FROM product p
-                JOIN image i ON p.id_image = i.id_image
-                WHERE p.name LIKE %s::text;
+                SELECT I.url
+                FROM product P
+                JOIN image I ON P.id_image = I.id_image
+                WHERE P.name LIKE %s::text;
             ''', (name_product,))
 
             image_url = cursor.fetchone()
@@ -71,7 +71,7 @@ def get_image_for_product(name_product):
                 return image_url[0]
 
     except Exception as e:
-        print(f'Error in get_image_for_product: {e}')
+        print(f'Ошибка: {e}')
         return None
 
 
@@ -140,4 +140,3 @@ def get_order_details(id_order):
 
     except Exception as e:
         print(f'Ошибка: {e}')
-        return []
