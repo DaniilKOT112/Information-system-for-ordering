@@ -103,7 +103,7 @@ class Ui_MainWindow(object):
 "}\n"
 "")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/catalog.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("icon/catalog.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.catalog.setIcon(icon)
         self.catalog.setIconSize(QtCore.QSize(49, 49))
         self.catalog.setShortcut("")
@@ -132,7 +132,7 @@ class Ui_MainWindow(object):
 "    margin: 0;\n"
 "}")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/categories.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap("icon/categories.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.categories.setIcon(icon1)
         self.categories.setIconSize(QtCore.QSize(49, 49))
         self.categories.setObjectName("categories")
@@ -157,7 +157,7 @@ class Ui_MainWindow(object):
 "    margin: 0;\n"
 "}")
         icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap("G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/product.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon2.addPixmap(QtGui.QPixmap("icon/product.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.products.setIcon(icon2)
         self.products.setIconSize(QtCore.QSize(49, 49))
         self.products.setObjectName("products")
@@ -182,7 +182,7 @@ class Ui_MainWindow(object):
 "    margin: 0;\n"
 "}")
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap("G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/orders.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap("icon/orders.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.orders.setIcon(icon3)
         self.orders.setIconSize(QtCore.QSize(49, 49))
         self.orders.setObjectName("orders")
@@ -207,7 +207,7 @@ class Ui_MainWindow(object):
 "    margin: 0;\n"
 "}")
         icon4 = QtGui.QIcon()
-        icon4.addPixmap(QtGui.QPixmap("G:/Учебная практика/Уп_0.2/Приложение для администратора/icon/reports.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon4.addPixmap(QtGui.QPixmap("icon/reports.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.reports.setIcon(icon4)
         self.reports.setIconSize(QtCore.QSize(49, 49))
         self.reports.setObjectName("reports")
@@ -834,6 +834,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_27.addWidget(self.cancelInfoOrder)
         self.gridLayout_9.addLayout(self.horizontalLayout_27, 2, 0, 1, 1)
         self.listOrders_2 = QtWidgets.QListView(self.frame_10)
+        self.listOrders_2.setStyleSheet("font: 63 10pt \"Segoe UI Variable Small Semibol\";")
         self.listOrders_2.setObjectName("listOrders_2")
         self.gridLayout_9.addWidget(self.listOrders_2, 1, 0, 1, 1)
         self.horizontalLayout_24.addLayout(self.gridLayout_9)
@@ -984,7 +985,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
-        self.Widget_pages.setCurrentIndex(9)
+        self.Widget_pages.setCurrentIndex(8)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
