@@ -3,19 +3,19 @@ import base64
 import os
 import sys
 
-from functools import partial
-from PyQt5.QtCore import QPropertyAnimation, QSize, QRegExp, Qt, QUrl, QStringListModel
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QRegExpValidator, QTextDocument, QPainter
-from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
-from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QPushButton, QHeaderView, QFileDialog, QLabel
-
 from database import connection
 from ui_main import Ui_MainWindow
 from qt_material import apply_stylesheet
+from datetime import datetime
+from functools import partial
+from PyQt5.QtCore import QPropertyAnimation, QSize, QRegExp, Qt, QUrl, QStringListModel
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QRegExpValidator, QPainter
+from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QPushButton, QHeaderView, QFileDialog, QLabel
 from get import get_category_id, get_parent_category_id, get_image_for_product, get_product_id, get_product_price, \
     get_product_quantity, get_order_quantity, get_order_details
 from reports import product_quantity, generate_pdf, categories_parents, categories_count, order_count, \
-    product_quantity_date
+    product_quantity_date, create_pdf_report
 
 directory = os.path.abspath(os.curdir)
 russian_validator = QRegExpValidator(QRegExp('[А-Яа-яЁё ]+'))
@@ -44,6 +44,19 @@ def update_product_amount(product_id, delta):
     connection.commit()
 
 
+def delete_unused_images():
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('''
+                DELETE FROM image
+                WHERE id_image 
+                NOT IN (SELECT id_image FROM product);
+            ''')
+        connection.commit()
+    except Exception as e:
+        print(f'Ошибка: {e}')
+
+
 def update_quantity(row, delta, model):
     try:
         amount_item = model.item(row, 3)
@@ -65,21 +78,6 @@ def update_quantity(row, delta, model):
         total_price = new_amount * price
         total_price_item = model.item(row, 5)
         total_price_item.setText('${:.2f}'.format(total_price))
-
-    except Exception as e:
-        print(f'Ошибка: {e}')
-
-
-def create_pdf_report(content):
-    try:
-        pdf_file, _ = QFileDialog.getSaveFileName(None, 'Save PDF', '', 'PDF files (*.pdf)')
-        if pdf_file:
-            doc = QTextDocument()
-            doc.setPlainText(content)
-            printer = QPrinter(QPrinter.PrinterResolution)
-            printer.setOutputFormat(QPrinter.PdfFormat)
-            printer.setOutputFileName(pdf_file)
-            doc.print_(printer)
 
     except Exception as e:
         print(f'Ошибка: {e}')
@@ -181,7 +179,6 @@ class MainWindow(QMainWindow):
         self.ui.cancelInfoOrder.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageOrderList))
 
         self.ui.outputReports.clicked.connect(self.report_output)
-        self.ui.cancelReport.clicked.connect(partial(self.ui.Widget_pages.setCurrentWidget, self.ui.pageOrderList))
 
         self.rows = []
         self.updates = []
@@ -189,21 +186,27 @@ class MainWindow(QMainWindow):
         self.report = ['Всего товаров в магазине',
                        'Вывод родительских категорий по категориям',
                        'Вывод категорий с их количеством',
-                       'Вывод всех заказов с исходным количеством']
+                       'Вывод всех заказов с исходным количеством',
+                       'Вывод количества заказанного товара по дням с итоговой суммой']
 
+        self.ui.lineEdit.setEnabled(False)
+        self.ui.lineEdit.setInputMask('9999-99-99')
         self.ui.comboBox.addItems(self.report)
+        self.ui.comboBox.currentIndexChanged.connect(self.line_edit)
 
-        self.report_2 = ['Вывод количества заказанного товара по дням с итоговой суммой']
-        self.ui.comboBox_2.addItems(self.report_2)
+    def line_edit(self):
+        report_type = self.ui.comboBox.currentText()
+        if report_type == 'Вывод количества заказанного товара по дням с итоговой суммой':
+            self.ui.lineEdit.setEnabled(True)
+        else:
+            self.ui.lineEdit.setEnabled(False)
 
     def report_output(self):
         try:
             report_type = self.ui.comboBox.currentText()
-            report_type_2 = self.ui.comboBox_2.currentText()
-            selected_date = self.ui.lineEdit.text()
             if report_type == 'Всего товаров в магазине':
                 products = product_quantity()
-                content = 'Список товаров и их количество:\n'
+                content = 'Список товаров и их количество:\n\n'
                 total_quantity = 0
                 for product in products:
                     content += f'ID товара: {product["id_product"]}\n'
@@ -220,44 +223,57 @@ class MainWindow(QMainWindow):
                 for row in result:
                     category_name, parent_name = row
                     if current_category != category_name:
-                        content += f'\nКатегория: {category_name}\n'
+                        content += f'\n'
+                        content += f'Категория: {category_name}\n\n'
                         current_category = category_name
                     content += f'Родительская категория: {parent_name}\n'
                 create_pdf_report(content)
 
             if report_type == 'Вывод категорий с их количеством':
-                content = 'Вывод категорий с их количеством:\n'
+                content = 'Вывод категорий с их количеством:\n\n'
                 result = categories_count()
                 total_quantity = 0
                 for row in result:
                     category_name, category_count = row
                     content += f'Наименование категории: {category_name}\n'
                     total_quantity += category_count
+                content += f'\n'
                 content += f'Количество категорий: {total_quantity}\n'
                 create_pdf_report(content)
 
             if report_type == 'Вывод всех заказов с исходным количеством':
-                content = 'Вывод заказов с исходным количеством:\n'
+                content = 'Вывод заказов с исходным количеством:\n\n'
                 result = order_count()
                 total_quantity = 0
                 for row in result:
                     id_order, order_date, record_count = row
                     content += f'ID заказа: {id_order}\n'
                     total_quantity += record_count
+                content += f'\n'
                 content += f'Количество заказов: {total_quantity}\n'
                 create_pdf_report(content)
 
-            if report_type_2 == 'Вывод количества заказанного товара по дням с итоговой суммой':
+            if report_type == 'Вывод количества заказанного товара по дням с итоговой суммой':
+                selected_date = self.ui.lineEdit.text()
+
+                try:
+                    datetime.strptime(selected_date, '%Y-%m-%d')
+                except ValueError:
+                    show_error_message('Дата введена не верно! Пожалуйста, введите дату в формате Г - М - Д.')
+                    return
+
                 content = f'Количество товара по дате заказа ({selected_date}):\n'
                 result = product_quantity_date(selected_date)
                 total_quantity = 0
                 for row in result:
                     order_date, name, amount, category, price = row
+                    content += f'\n'
                     content += f'Наименование товара: {name}\n'
                     content += f'Категория товара {category}\n'
                     content += f'Количество: {amount}\n'
                     content += f'Цена: {price}\n'
                     total_quantity += amount
+                content += f'\n'
                 content += f'Итоговое количество: {total_quantity}\n'
                 create_pdf_report(content)
 
@@ -306,7 +322,7 @@ class MainWindow(QMainWindow):
                 for record in order_details_data:
                     self.order_lines.append(
                         f' Наименование: {record[0]}\n Категория: {record[1]}\n Количество: {record[3]}\n Цена: {record[4]}\'')
-                    total_sum += float(record[4].replace('$', ''))
+                    total_sum += float(record[4].replace('$', '').replace(',', '.'))
                 self.order_lines.append(f' Итоговая цена заказа: {total_sum:.2f}')
                 self.order_details_model.setStringList(self.order_lines)
 
@@ -731,14 +747,15 @@ class MainWindow(QMainWindow):
 
     def apply_function(self):
         if self.filter_enabled:
+            self.get_categories()
             self.ui.comboBox_categories.setEnabled(False)
             self.filter_enabled = False
             self.get_data_product()
         else:
+            self.get_categories()
             self.ui.comboBox_categories.setEnabled(True)
             self.filter_enabled = True
             self.filter_product()
-            self.get_categories()
 
     def selected_category_products(self):
         selected_category = self.ui.comboBox_categories.currentText()
@@ -1144,6 +1161,7 @@ class MainWindow(QMainWindow):
 
     def edit_product(self, row):
         try:
+            self.get_categories_parent_category_2()
             self.ui.Widget_pages.setCurrentWidget(self.ui.pageEditProduct)
             name_product = self.model_table_main_product.item(row, 0).text()
             description_product = self.model_table_main_product.item(row, 3).text()
@@ -1338,21 +1356,33 @@ class MainWindow(QMainWindow):
             with connection.cursor() as cursor:
                 if new_categories_name:
                     cursor.execute('''
+                        SELECT id_categories 
+                        FROM categories 
+                        WHERE name_categories = %s;''',
+                                   (new_categories_name,))
+                    existing_category_id = cursor.fetchone()
+
+                    if existing_category_id and existing_category_id[0] != self.current_edit_categories_id:
+                        show_error_message('Такая категория уже существует!')
+                        return
+
+                    cursor.execute('''
                         UPDATE categories 
                         SET name_categories = %s 
                         WHERE id_categories = %s;
                     ''', (new_categories_name, self.current_edit_categories_id))
+
                 if new_parent_categories_name:
                     cursor.execute('''
                         UPDATE parent_category 
                         SET name = %s 
                         WHERE id_parent_category = %s;
                     ''', (new_parent_categories_name, self.current_edit_parent_categories_id))
+
                 connection.commit()
 
         except Exception as e:
             print(f'Ошибка: {e}')
-            show_error_message('Ошибка при обновлении категории.')
 
         finally:
             self.get_categories_parent_category()
@@ -1410,6 +1440,7 @@ class MainWindow(QMainWindow):
             self.get_data_categories()
             self.get_categories_parent_category()
             self.get_data_product()
+            delete_unused_images()
 
     def animate_menu_width(self, enable):
         width = self.ui.frameLeftMenu.width()

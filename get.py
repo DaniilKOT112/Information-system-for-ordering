@@ -75,24 +75,6 @@ def get_image_for_product(name_product):
         return None
 
 
-def get_category_for_product(product_name):
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute('''
-                SELECT C.name_categories
-                FROM product P
-                JOIN categories_parent_category CPC ON P.id_category = CPC.id_categories
-                JOIN categories C ON CPC.id_categories = C.id_categories
-                WHERE P.name = %s;
-                ''', (product_name,))
-            result = cursor.fetchone()
-            if result:
-                return result[0]
-    except Exception as e:
-        print(f'Ошибка: {e}')
-        return None
-
-
 def get_product_price(product_id):
     with connection.cursor() as cursor:
         cursor.execute('SELECT price FROM product WHERE id_product = %s;', (product_id,))
@@ -105,14 +87,6 @@ def get_product_quantity(product_id):
         cursor.execute('SELECT amount FROM product WHERE id_product = %s;', (product_id,))
         quantity = cursor.fetchone()[0]
     return quantity
-
-
-def get_order_price(order_id):
-    with connection.cursor() as cursor:
-        cursor.execute('SELECT price FROM order_details WHERE id_order = %s',
-                       (order_id,))
-        price = cursor.fetchone()[0]
-    return price
 
 
 def get_order_quantity(order_id, product_id):
