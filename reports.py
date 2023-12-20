@@ -110,3 +110,18 @@ def generate_pdf(order_id, order_pdf):
 
         except Exception as e:
             print(f'Ошибка: {e}')
+
+
+def create_pdf_report(content):
+    try:
+        pdf_file, _ = QFileDialog.getSaveFileName(None, 'Save PDF', '', 'PDF files (*.pdf)')
+        if pdf_file:
+            doc = QTextDocument()
+            doc.setPlainText(content)
+            printer = QPrinter(QPrinter.PrinterResolution)
+            printer.setOutputFormat(QPrinter.PdfFormat)
+            printer.setOutputFileName(pdf_file)
+            doc.print_(printer)
+
+    except Exception as e:
+        print(f'Ошибка: {e}')

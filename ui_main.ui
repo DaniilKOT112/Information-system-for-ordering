@@ -19,6 +19,10 @@
   <property name="windowTitle">
    <string>Информационная система для оформления заказа в зоомагазине</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>../../../Downloads/free-icon-display-3413708.png</normaloff>../../../Downloads/free-icon-display-3413708.png</iconset>
+  </property>
   <property name="styleSheet">
    <string notr="true">background-color: rgb(94, 94, 94);</string>
   </property>
@@ -500,7 +504,7 @@
             <item>
              <widget class="QStackedWidget" name="Widget_pages">
               <property name="currentIndex">
-               <number>10</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="pageCatalog">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -860,7 +864,7 @@
                           </size>
                          </property>
                          <property name="styleSheet">
-                          <string notr="true"/>
+                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>добавить</string>
@@ -876,7 +880,7 @@
                           </size>
                          </property>
                          <property name="styleSheet">
-                          <string notr="true"/>
+                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>отмена</string>
@@ -918,8 +922,7 @@
                        <item>
                         <widget class="QLabel" name="label_1">
                          <property name="styleSheet">
-                          <string notr="true">font: 75 11pt &quot;Montserrat&quot;;
-font: bold;</string>
+                          <string notr="true">font: 63 11pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>Добавить категорию</string>
@@ -1079,7 +1082,7 @@ font: bold;</string>
                           </size>
                          </property>
                          <property name="styleSheet">
-                          <string notr="true"/>
+                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>Применить</string>
@@ -1095,7 +1098,7 @@ font: bold;</string>
                           </size>
                          </property>
                          <property name="styleSheet">
-                          <string notr="true"/>
+                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>отмена</string>
@@ -1137,8 +1140,7 @@ font: bold;</string>
                        <item>
                         <widget class="QLabel" name="label_20">
                          <property name="styleSheet">
-                          <string notr="true">font: 75 11pt &quot;Montserrat&quot;;
-font: bold;</string>
+                          <string notr="true">font: 63 11pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>Редактировать категорию</string>
@@ -1413,8 +1415,7 @@ font: bold;</string>
                        <item>
                         <widget class="QLabel" name="label_4">
                          <property name="styleSheet">
-                          <string notr="true">font: 75 11pt &quot;Montserrat&quot;;
-font: bold;</string>
+                          <string notr="true">font: 63 11pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>Добавить товар</string>
@@ -1603,7 +1604,7 @@ font: bold;</string>
                           </size>
                          </property>
                          <property name="styleSheet">
-                          <string notr="true"/>
+                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>Добавить</string>
@@ -1619,7 +1620,7 @@ font: bold;</string>
                           </size>
                          </property>
                          <property name="styleSheet">
-                          <string notr="true"/>
+                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>Отмена</string>
@@ -1714,8 +1715,7 @@ font: bold;</string>
                        <item>
                         <widget class="QLabel" name="label_13">
                          <property name="styleSheet">
-                          <string notr="true">font: 75 11pt &quot;Montserrat&quot;;
-font: bold;</string>
+                          <string notr="true">font: 63 11pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>Редактировать товар</string>
@@ -1751,6 +1751,18 @@ font: bold;</string>
                        </item>
                        <item>
                         <widget class="QTextEdit" name="textEditImageProduct_2">
+                         <property name="minimumSize">
+                          <size>
+                           <width>150</width>
+                           <height>0</height>
+                          </size>
+                         </property>
+                         <property name="maximumSize">
+                          <size>
+                           <width>400</width>
+                           <height>16777215</height>
+                          </size>
+                         </property>
                          <property name="styleSheet">
                           <string notr="true"/>
                          </property>
@@ -1865,7 +1877,7 @@ font: bold;</string>
                           </size>
                          </property>
                          <property name="styleSheet">
-                          <string notr="true"/>
+                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>Применить</string>
@@ -1881,7 +1893,7 @@ font: bold;</string>
                           </size>
                          </property>
                          <property name="styleSheet">
-                          <string notr="true"/>
+                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
                          </property>
                          <property name="text">
                           <string>Отмена</string>
@@ -2547,23 +2559,6 @@ font: bold;</string>
                         </widget>
                        </item>
                        <item>
-                        <widget class="QLabel" name="label_27">
-                         <property name="styleSheet">
-                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
-                         </property>
-                         <property name="text">
-                          <string>Отчет:</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QComboBox" name="comboBox">
-                         <property name="styleSheet">
-                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
                         <layout class="QHBoxLayout" name="horizontalLayout_34">
                          <property name="leftMargin">
                           <number>0</number>
@@ -2594,40 +2589,40 @@ font: bold;</string>
                            <property name="bottomMargin">
                             <number>0</number>
                            </property>
-                           <item>
-                            <widget class="QLabel" name="label_29">
-                             <property name="styleSheet">
-                              <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
-                             </property>
-                             <property name="text">
-                              <string>Отчет с датой:</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item>
-                            <widget class="QComboBox" name="comboBox_2">
-                             <property name="styleSheet">
-                              <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
-                             </property>
-                            </widget>
-                           </item>
                           </layout>
+                         </item>
+                         <item>
+                          <widget class="QLabel" name="label_27">
+                           <property name="styleSheet">
+                            <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
+                           </property>
+                           <property name="text">
+                            <string>Отчет:</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QComboBox" name="comboBox">
+                           <property name="styleSheet">
+                            <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QLabel" name="label_30">
+                           <property name="styleSheet">
+                            <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
+                           </property>
+                           <property name="text">
+                            <string>Дата:</string>
+                           </property>
+                          </widget>
                          </item>
                          <item>
                           <layout class="QVBoxLayout" name="verticalLayout_20">
                            <property name="spacing">
                             <number>10</number>
                            </property>
-                           <item>
-                            <widget class="QLabel" name="label_30">
-                             <property name="styleSheet">
-                              <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
-                             </property>
-                             <property name="text">
-                              <string>Дата:</string>
-                             </property>
-                            </widget>
-                           </item>
                            <item>
                             <widget class="QLineEdit" name="lineEdit">
                              <property name="styleSheet">
@@ -2697,22 +2692,6 @@ font: bold;</string>
                          </property>
                          <property name="text">
                           <string>Вывод</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QPushButton" name="cancelReport">
-                         <property name="minimumSize">
-                          <size>
-                           <width>140</width>
-                           <height>35</height>
-                          </size>
-                         </property>
-                         <property name="styleSheet">
-                          <string notr="true">font: 63 10pt &quot;Segoe UI Variable Small Semibol&quot;;</string>
-                         </property>
-                         <property name="text">
-                          <string>Отмена</string>
                          </property>
                         </widget>
                        </item>
