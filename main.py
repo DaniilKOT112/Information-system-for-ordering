@@ -13,7 +13,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QRegE
 from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QPushButton, QHeaderView, QFileDialog, QLabel
 from get import get_category_id, get_parent_category_id, get_image_for_product, get_product_id, get_product_price, \
-    get_product_quantity, get_order_quantity, get_order_details
+    get_product_quantity, get_order_quantity, get_order_details, get_categories_in_order
 from reports import product_quantity, generate_pdf, categories_parents, categories_count, order_count, \
     product_quantity_date, create_pdf_report
 
@@ -97,6 +97,7 @@ class MainWindow(QMainWindow):
         self.image_file = None
         self.new_order_id = None
 
+        self.setWindowIcon(QIcon(directory + '/icon/icon.png'))
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.ui.Widget_pages.setCurrentWidget(self.ui.pageCatalog)
@@ -152,10 +153,10 @@ class MainWindow(QMainWindow):
         self.get_data_main_product()
         self.get_categories_parent_category()
         self.get_categories_parent_category_2()
-        self.get_data_product()
         self.get_data_categories()
         self.get_categories()
         self.get_data_orders()
+        self.get_data_product()
 
         self.ui.comboBox_categories.setEnabled(False)
 
@@ -809,7 +810,7 @@ class MainWindow(QMainWindow):
                     JOIN parent_category PC ON CPC.id_parent_categories = PC.id_parent_category
                     JOIN categories C ON CPC.id_categories = C.id_categories
                     WHERE C.name_categories = %s
-                    LIMIT 100;
+                    LIMIT 30;
                 ''', (select_category,))
                 records = cursor.fetchall()
 
@@ -1059,6 +1060,19 @@ class MainWindow(QMainWindow):
             selected_row = self.ui.tableProduct.currentIndex().row()
             original_name_product = self.model_table_main_product.item(selected_row, 0).text()
             id_product = get_product_id(original_name_product)
+
+            with connection.cursor() as cursor:
+                cursor.execute('''
+                    SELECT id_product_order 
+                    FROM order_details 
+                    WHERE id_product = %s;
+                ''', (id_product,))
+                order_details_rows = cursor.fetchall()
+
+                if order_details_rows:
+                    show_error_message('Вы не можете изменить товар, пока у вас есть незавершенные заказы!')
+                    return
+
             new_name_product = self.ui.lineEditNameProduct_2.text().strip()
 
             if self.image_file_2 is not None:
@@ -1129,20 +1143,29 @@ class MainWindow(QMainWindow):
                 product_id = get_product_id(product_name)
 
                 cursor.execute('''
-                    SELECT id_image
-                    FROM product
+                    SELECT id_product_order 
+                    FROM order_details 
+                    WHERE id_product = %s;''', (product_id,))
+                order_details_rows = cursor.fetchall()
+
+                if order_details_rows:
+                    show_error_message('Вы не можете удалить товар, пока у вас есть незавершенные заказы!')
+                    return
+
+                cursor.execute('''
+                    SELECT id_image 
+                    FROM product 
                     WHERE id_product = %s;
                 ''', (product_id,))
-
                 image_id = cursor.fetchone()[0]
 
                 cursor.execute('''
-                    DELETE FROM product
+                    DELETE FROM product 
                     WHERE id_product = %s;
                 ''', (product_id,))
 
                 cursor.execute('''
-                    DELETE FROM image
+                    DELETE FROM image 
                     WHERE id_image = %s;
                 ''', (image_id,))
 
@@ -1348,29 +1371,35 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f'Ошибка: {e}')
 
-    def update_categories(self):
+    def update_categories(self, row):
         try:
-            new_categories_name = self.ui.lineEditNameCategory_2.text()
-            new_parent_categories_name = self.ui.lineEditParentCategory_2.text()
-
             with connection.cursor() as cursor:
-                if new_categories_name:
-                    cursor.execute('''
-                        SELECT id_categories 
-                        FROM categories 
-                        WHERE name_categories = %s;''',
-                                   (new_categories_name,))
-                    existing_category_id = cursor.fetchone()
+                new_categories_name = self.ui.lineEditNameCategory_2.text()
+                new_parent_categories_name = self.ui.lineEditParentCategory_2.text()
 
-                    if existing_category_id and existing_category_id[0] != self.current_edit_categories_id:
-                        show_error_message('Такая категория уже существует!')
-                        return
+                categories_name = self.model_table_categories.item(row, 0).text()
+                categories_id = get_category_id(categories_name)
 
-                    cursor.execute('''
-                        UPDATE categories 
-                        SET name_categories = %s 
-                        WHERE id_categories = %s;
-                    ''', (new_categories_name, self.current_edit_categories_id))
+                if get_categories_in_order(cursor, categories_id):
+                    show_error_message('Вы не можете обновить категорию, пока у вас есть незавершенные заказы!')
+                    return
+
+                cursor.execute('''
+                    SELECT id_categories 
+                    FROM categories 
+                    WHERE name_categories = %s;''',
+                               (new_categories_name,))
+                existing_category_id = cursor.fetchone()
+
+                if existing_category_id and existing_category_id[0] != self.current_edit_categories_id:
+                    show_error_message('Такая категория уже существует!')
+                    return
+
+                cursor.execute('''
+                    UPDATE categories 
+                    SET name_categories = %s 
+                    WHERE id_categories = %s;
+                ''', (new_categories_name, self.current_edit_categories_id))
 
                 if new_parent_categories_name:
                     cursor.execute('''
@@ -1398,41 +1427,46 @@ class MainWindow(QMainWindow):
                 categories_id = get_category_id(categories_name)
                 parent_categories_id = get_parent_category_id(parent_categories_name)
 
+                if get_categories_in_order(cursor, categories_id):
+                    show_error_message('Вы не можете удалить категорию, пока у вас есть незавершенные заказы!')
+                    return
+
                 cursor.execute('''
-                    DELETE FROM categories_parent_category 
+                    DELETE FROM categories_parent_category
                     WHERE id_categories = %s AND id_parent_categories = %s;
                 ''', (categories_id, parent_categories_id))
 
                 cursor.execute('''
-                    SELECT 1 
-                    FROM categories_parent_category 
+                    SELECT 1
+                    FROM categories_parent_category
                     WHERE id_categories = %s;
                 ''', (categories_id,))
                 existing_relations = cursor.fetchall()
 
                 if not existing_relations:
                     cursor.execute('''
-                        DELETE FROM categories 
+                        DELETE FROM categories
                         WHERE id_categories = %s;
                     ''', (categories_id,))
 
                 cursor.execute('''
-                    SELECT 1 
-                    FROM categories_parent_category 
+                    SELECT 1
+                    FROM categories_parent_category
                     WHERE id_parent_categories = %s;
                 ''', (parent_categories_id,))
                 existing_relations = cursor.fetchall()
 
                 if not existing_relations:
                     cursor.execute('''
-                        DELETE FROM parent_category 
+                        DELETE FROM parent_category
                         WHERE id_parent_category = %s;
                     ''', (parent_categories_id,))
 
                 connection.commit()
+
         except Exception as e:
             print(f'Ошибка: {e}')
-            show_error_message('Ошибка при удалении записи.')
+            connection.rollback()
 
         finally:
             self.ui.Widget_pages.setCurrentWidget(self.ui.pageCategories)
