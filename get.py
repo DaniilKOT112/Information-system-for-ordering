@@ -114,3 +114,16 @@ def get_order_details(id_order):
 
     except Exception as e:
         print(f'Ошибка: {e}')
+
+
+def get_categories_in_order(cursor, categories_id):
+    cursor.execute('''
+        SELECT 1
+        FROM order_details OD
+        JOIN product P ON OD.id_product = P.id_product
+        JOIN categories_parent_category CPC ON P.id_category = CPC.id_categories_parent_category
+        WHERE CPC.id_categories = %s OR CPC.id_parent_categories = %s;
+    ''', (categories_id, categories_id))
+    return cursor.fetchone() is not None
+
+
